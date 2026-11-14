@@ -1,0 +1,3779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>元素混战 · 双人对战</title>
+<style>
+:root{
+  --bg:#14161c; --panel:#1d2028; --panel2:#232733; --line:#2c3140;
+  --text:#e8eaf0; --muted:#8b91a3; --brand:#4f7cff; --danger:#e0533d;
+  --good:#43b581; --warn:#e0a83d;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;}
+#app{max-width:1080px;margin:0 auto;padding:16px 14px 60px;}
+h1{font-size:20px;margin:0 0 2px}
+.sub{color:var(--muted);font-size:12px;margin-bottom:14px}
+.btn{background:var(--brand);color:#fff;border:none;border-radius:8px;padding:9px 16px;
+  font-size:14px;cursor:pointer}
+.btn:disabled{background:var(--panel2);color:var(--muted);cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.row{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.col{flex:1;min-width:320px}
+h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+h2 .tag{font-size:11px;color:var(--muted);font-weight:400}
+input.name{background:var(--panel2);border:1px solid var(--line);color:var(--text);
+  border-radius:8px;padding:7px 10px;font-size:13px;width:100%}
+.group-title{font-size:12px;color:var(--muted);margin:10px 0 5px;display:flex;gap:6px;align-items:center}
+.group-title b{color:var(--text);font-weight:600}
+.rostergrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:6px}
+.charcard{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;
+  cursor:pointer;font-size:12px;line-height:1.35;transition:border-color .12s, background .12s}
+.charcard:hover{border-color:var(--brand)}
+.charcard.sel{border-color:var(--brand);background:rgba(79,124,255,.14)}
+.charcard .cn{font-weight:600}
+.charcard .cmeta{color:var(--muted);font-size:11px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.counter{font-size:12px;color:var(--muted);margin-top:6px}
+.counter.ok{color:var(--good)}
+.detail{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px;font-size:13px}
+.detail h3{margin:0 0 6px;font-size:15px}
+.dmeta{color:var(--muted);font-size:12px;margin-bottom:6px}
+.dpas{font-size:12px;color:var(--warn);margin-bottom:8px}
+.dsk .sk{border-top:1px dashed var(--line);padding:6px 0}
+.dsk .sk b{margin-right:6px}
+.dsk .cost{color:var(--brand);font-size:11px}
+.dsk .skd{color:var(--muted);font-size:12px;margin-top:2px}
+.envrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.envbtn{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;
+  padding:6px 12px;font-size:12px;cursor:pointer}
+.envbtn.sel{border-color:var(--brand);background:rgba(79,124,255,.14)}
+/* 战斗 */
+.battle-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;margin-bottom:8px}
+.battle-top .phase{font-weight:700;font-size:15px}
+.side-label{font-size:12px;color:var(--muted);margin:10px 0 4px;display:flex;align-items:center;gap:8px}
+.units{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.unit{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;position:relative;font-size:12px}
+.unit.dead{opacity:.42}
+.unit.pickable{cursor:pointer;border-color:var(--brand)}
+.unit.picked{border-color:var(--good);box-shadow:0 0 0 1px var(--good) inset}
+.unit .nm{font-weight:600;display:flex;align-items:center;gap:5px}
+.unit .hp{color:var(--muted);font-size:11px;margin-left:auto}
+.unit .qi{color:var(--brand);font-size:11px}
+.hpbar{height:4px;border-radius:2px;background:var(--panel);overflow:hidden;margin:4px 0}
+.hpbar>i{display:block;height:100%}
+.chips{color:var(--muted);font-size:10.5px;min-height:13px;line-height:1.3}
+.skillpanel{margin-top:10px}
+.unit-row{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.unit-row .uname{width:70px;font-weight:600;font-size:13px;flex-shrink:0}
+.skbtn{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:7px;
+  padding:4px 8px;font-size:12px;cursor:pointer;margin:2px 2px 0 0}
+.skbtn:hover:not(:disabled){border-color:var(--brand)}
+.skbtn:disabled{opacity:.4;cursor:not-allowed}
+.skbtn.cost{color:var(--brand)}
+.pick-hint{color:var(--brand);font-size:12px;margin:8px 0}
+.queuebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.qitem{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:3px 8px;font-size:12px}
+.log{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:14px;
+  font-size:12px;color:var(--muted);max-height:180px;overflow-y:auto;white-space:pre-wrap}
+.log b{color:var(--text)}
+.err{color:var(--danger);font-size:12px;margin-top:8px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:50}
+.overlay .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px 34px;text-align:center;max-width:420px}
+.overlay h2{margin:0 0 10px}
+.overlay p{color:var(--muted);font-size:13px;margin:0 0 18px}
+.big{padding:12px 26px;font-size:16px}
+.form-badge{display:inline-block;font-size:10px;color:#ffd76b;background:rgba(224,192,74,.14);border:1px solid rgba(224,192,74,.4);border-radius:6px;padding:0 5px;margin-left:4px;line-height:1.5;vertical-align:middle}
+.form-title{font-size:12px;color:#ffd76b;font-weight:600;margin:8px 0 4px;border-top:1px dashed var(--line);padding-top:8px}
+.battle-wrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px;align-items:start}
+.battle-main{display:grid;gap:0}
+.battle-log{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;color:var(--muted);white-space:pre-wrap}
+.battle-log b{color:var(--text)}
+@media (max-width:860px){.battle-wrap{grid-template-columns:1fr}.battle-log{position:static;max-height:240px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// 元素混战 · MVP 引擎 v0.1
+// 纯逻辑、零依赖。范围：4v4、气势、部位掷骰、四元素异常（火/冰/雷/毒）、
+// 潮湿与蒸发/导电/冻结、护盾/无敌/减伤、胜负判定。
+// 未实现（明确砍掉）：武器与耐久、元素共鸣、背水一战、控制条例19章、土/金/木/暗。
+
+const ENGINE_VERSION = '0.1.0';
+
+/* ---------------- 随机 ---------------- */
+function makeRng(seed) {
+  let a = (seed >>> 0) || 1;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const PART_MULT = { vital: 1.6, body: 1.0, armor: 0.7 };
+
+/* ---------------- 元素异常 ---------------- */
+const ABNORMAL = {
+  火: { name: '灼烧', th: 12, turns: 2, dot: 5 },
+  冰: { name: '冰冻', th: 12, turns: 1, dot: 0 },
+  雷: { name: '雷罚', th: 15, turns: 2, dot: 0 },
+  毒: { name: '中毒', th: 12, turns: 3, dot: 3 },
+  木: { name: '缠绕', th: 10, turns: 3, dot: 3 },
+  金: { name: '锈蚀', th: 12, turns: 2, dot: 0 },
+  光: { name: '辉耀', th: 12, turns: 1, dot: 0 },
+  暗: { name: '诅咒', th: 12, turns: 1, dot: 0 },
+  土: { name: '重压', th: 12, turns: 2, dot: 0 },
+};
+const ELEMENTAL_STATUS = Object.values(ABNORMAL).map((a) => a.name);
+
+// 各元素抗性：applyToMe 元素获取衰减；dmgTaken 受到该元素伤害的增减
+const RESIST = {
+  火: { applyToMe: { 毒: 0.5 }, burnDot: 0.5 },
+  水: { applyToMe: { 火: 0.5 }, burnTurns: 1 },
+  风: {},
+  冰: { applyToMe: { 雷: 0.5 } },
+  雷: {},
+  毒: {},
+  土: { applyToMe: { 毒: 0.5 }, dmgTaken: { 风: -0.2 } },
+  光: { dmgTaken: { 暗: -0.2 } },
+  暗: { dmgTaken: { 光: -0.2 }, applyToMe: { 火: 0.5 } },
+  金: { dmgTaken: { 木: -0.25 } },
+  木: { dmgTaken: { 金: -0.25 }, applyToMe: { 毒: 0.5 } },
+  无: {},
+};
+
+// 规则书没有武器表，只给了耐久规则；这里按定位分配初始耐久（见 docs/裁决清单.md D1）
+const WEAPON_DUR_BY_ROLE = { 坦克: 16, 战士: 12, 刺客: 10, 射手: 10, 法师: 8, 辅助: 8, 治疗: 8 };
+const WEAPON_WAKE_DMG = 4;
+
+// 用户补充的武器表：角色 → 武器名
+const WEAPON_BY_CHAR = {
+  赤潮: '偃月刀', 灰蛰: '爆炎双刃', 焚炎: '焚天法杖', 炎龙: '龙煌战戟',
+  澜汐: '澜水法珠', 汐: '潮汐权杖', 英波: '鳞波枪',
+  乌川: '挽风双刃', 朔飔: '朔风法杖', 凌风: '裂风短刃',
+  皓霜: '霜袖法杖', 玄渊: '寒渊双刃', 寒魄: '永冻巨锤',
+  金岚: '浮光法杖', 黯雷: '奔霄短刃', 霆光: '霆光长弓', 闪霆: '掌雷指环',
+  藕苞: '虫蛊法珠', 蛊蔓: '蛊蔓藤杖', 蚀骸: '蚀骸骨刃',
+  磐岩: '磐岩巨盾', 沉壤: '沉壤战锤', 岩铠: '岩铠重盾',
+  晨晖: '晨晖圣杖', 曙星: '曙星法珠', 流光: '流光圣剑',
+  冥影: '冥影短刃', 夜煞: '夜煞法杖', 影刃: '影刃双刺',
+  铮锋: '铮锋长剑', 铁骨: '铁骨重盾', 铁心: '铁心巨斧',
+  青藤: '青藤法杖', 苍柏: '苍柏战刃', 灵木: '灵木枝杖',
+  碧尘: '撼地重锤', 青穹: '不坏重盾', 殷红: '殷红巨刃', 沧嵐: '沉岳重戟',
+};
+
+const WEAPONS = {};
+function registerWeapons(list) {
+  for (const w of list || []) WEAPONS[w.name] = w;
+  return Object.keys(WEAPONS).length;
+}
+const wdef = (u) => (u.weapon && WEAPONS[u.weapon.name]) || null;
+
+// 元素共鸣（第十二章）。req 为元素需求：长度 2 = 该系 ≥2 人；长度 3 = 三系各 ≥1。
+// mods 里每个键都由引擎在对应结算点读取。
+const RESONANCES = [
+  { id: '焚天', req: ['火', '火'], desc: '灼烧每跳+1、火伤+10%、冰冻-1回合', mods: { burnDotAdd: 1, fireDmg: 0.1, freezeTurnsAdd: -1 } },
+  { id: '永冻', req: ['冰', '冰'], desc: '冰冻+1回合、冰值+1、每回合回3血', mods: { freezeTurnsAdd: 1, iceValAdd: 1, healPerRound: 3 } },
+  { id: '天雷', req: ['雷', '雷'], desc: '雷罚+8%、敌方每回合 1 点气势流失', mods: { enemyQiDrain: 1 } },
+  { id: '瘟疫', req: ['毒', '毒'], desc: '中毒每跳+1、治疗-15%', mods: { poisonDotAdd: 1, healMult: 0.85 } },
+  { id: '裂空', req: ['风', '风'], desc: '每回合驱散自身 1 个减益', mods: { purgePerRound: 1 } },
+  { id: '洪流', req: ['水', '水'], desc: '水伤+10%、每回合回2血', mods: { waterDmg: 0.1, healPerRound: 2 } },
+  { id: '归一', req: ['无', '无'], desc: '无属性伤害+15%、受到伤害-8%', mods: { wuDmg: 0.15, dmgTakenMult: 0.92 } },
+  { id: '地脉', req: ['土', '土'], desc: '每回合自动+1岩印、土伤+10%', mods: { markAuto: '岩印', earthDmg: 0.1 } },
+  { id: '圣光', req: ['光', '光'], desc: '每回合自动+1辉光', mods: { markAuto: '辉光' } },
+  { id: '暗影', req: ['暗', '暗'], desc: '每回合自动+1咒印、诅咒伤+15%', mods: { markAuto: '咒印', curseDmg: 0.15 } },
+  { id: '锋刃', req: ['金', '金'], desc: '每回合自动+1锋锐印、护甲部位伤+20%', mods: { markAuto: '锋锐印', armorDmg: 0.2 } },
+  { id: '长青', req: ['木', '木'], desc: '每回合自动+1生息印、治疗+15%', mods: { markAuto: '生息印', healMult: 1.15 } },
+  { id: '混沌', req: ['火', '冰', '雷'], desc: '每次技能命中随机附加 1 点火/冰/雷值', mods: { randomElement: true } },
+  { id: '腐沼', req: ['毒', '风', '水'], desc: '中毒可扩散（记日志）', mods: {} },
+  { id: '天火', req: ['火', '雷', '风'], desc: '异常可共存 3 种、全队每回合 +1 气势', mods: { maxStatus: 3, qiPerRound: 1 } },
+  { id: '煌天', req: ['火', '光', '雷'], desc: '异常可共存 3 种、全队每回合 +1 气势', mods: { maxStatus: 3, qiPerRound: 1 } },
+  { id: '幽冥', req: ['暗', '毒', '冰'], desc: '异常可共存 3 种、敌方每回合 -1 气势', mods: { maxStatus: 3, enemyQiDrain: 1 } },
+  { id: '万象', req: ['土', '光', '暗'], desc: '全队受伤 -8%', mods: { dmgTakenMult: 0.92 } },
+  { id: '百炼', req: ['火', '金', '土'], desc: '全队武器耐久损耗 -30%', mods: { weaponWearMult: 0.7 } },
+  { id: '森罗', req: ['木', '水', '毒'], desc: '中毒潮湿 +1 回合（记日志）', mods: {} },
+  { id: '金石', req: ['金', '土', '光'], desc: '护盾吸收 +30%', mods: { shieldMult: 1.3 } },
+  { id: '枯荣', req: ['木', '火', '暗'], desc: '异常可共存 3 种、敌方每回合 -1 气势、全队回2血', mods: { maxStatus: 3, enemyQiDrain: 1, healPerRound: 2 } },
+];
+
+const HARD_CC = ['冰冻', '麻痹', '封印'];
+
+function detectResonances(team) {
+  const count = {};
+  for (const name of team) {
+    const c = CHARS[name];
+    if (!c) continue;
+    count[c.element] = (count[c.element] || 0) + 1;
+  }
+  const out = [];
+  for (const r of RESONANCES) {
+    if (r.req.length === 2) {
+      if ((count[r.req[0]] || 0) >= 2) out.push(r.id);
+    } else if (r.req.every((e) => (count[e] || 0) >= 1)) {
+      out.push(r.id);
+    }
+  }
+  return out;
+}
+
+// 五大战场环境（第七章）。mods 的键由引擎在各结算点读取。
+const ENVIRONMENTS = [
+  { id: 'lava', name: '熔岩荒原', mods: { burnDot: 1, heal: 0.75, poisonGain: 0.5, waterSelfDot: 2, waterDmg: 0.15, fireValExtra: 1, fireDmg: 0.1, weaponWear3: true } },
+  { id: 'wetland', name: '泽国湿地', mods: { wetAll: 2, poisonPerRound: 1, waterDmg: 0.15, fireValMinus: 2 } },
+  { id: 'canyon', name: '雷云峡谷', mods: { wetThunder: 2, thunderUlt: 2, lightGain: 0.5, weaponWear3: true } },
+  { id: 'pillar', name: '狂风隘口', mods: { poisonPerRound: -2, singleMiss: 0.15, darkGain: 1 } },
+  { id: 'icefield', name: '永冻冰原', mods: { dotAll: 2, qiMinus: 1, fireValHalf: true, iceValExtra: 1, weaponWear3: true } },
+];
+
+function weaponStage(u) {
+  const w = u.weapon;
+  if (!w || w.dur <= 0) return 'broken';
+  if (w.dur >= w.max * 0.5) return 'intact';
+  if (w.dur >= 4) return 'cracked';
+  return 'fragile';
+}
+
+/* ---------------- 角色档案 ---------------- */
+const C = (o) => ({
+  name: o.name,
+  element: o.element,
+  maxHp: o.hp,
+  role: o.role,
+  parts: { vital: o.v[0], body: o.v[1], armor: 100 - o.v[0] - o.v[1] },
+  sp: { init: o.sp[0], max: o.sp[1], min: o.sp[2] },
+  passive: o.passive || '',
+  skills: o.skills.map((s, i) => ({ id: i + 1, ...s })),
+});
+
+const CHARS = {
+  焚炎: C({
+    name: '焚炎', element: '火', hp: 135, v: [18, 42], role: '法师', sp: [1, 4, -4],
+    passive: '造成灼烧时额外+1火值',
+    skills: [
+      { name: '火球', cost: 0, target: 'one', desc: '单体11伤 +2火值', use: (B, me, [t]) => B.hit(me, t, { dmg: 11, ele: ['火', 2] }) },
+      { name: '烈焰冲击', cost: 3, target: 'one', desc: '单体17伤 +3火值', use: (B, me, [t]) => B.hit(me, t, { dmg: 17, ele: ['火', 3] }) },
+      { name: '焚风', cost: 4, target: 'two', desc: '两名各13伤 +2火值', use: (B, me, ts) => ts.forEach((t) => B.hit(me, t, { dmg: 13, ele: ['火', 2] })) },
+      { name: '灼热之环', cost: 5, target: 'all', desc: '全体9伤 +2火值，已灼烧+25%', use: (B, me, ts) => ts.forEach((t) => B.hit(me, t, { dmg: 9, mult: B.hasStatus(t, '灼烧') ? 1.25 : 1, ele: ['火', 2] })) },
+      { name: '炼狱爆裂', cost: 8, target: 'one', desc: '30伤 +相邻12溅射，灼烧2回合', use: (B, me, [t]) => { B.hit(me, t, { dmg: 30, ele: ['火', 3] }); B.splash(me, t, 12); B.addStatus(t, '灼烧', 2); } },
+    ],
+  }),
+
+  澜汐: C({
+    name: '澜汐', element: '水', hp: 135, v: [15, 38], role: '辅助', sp: [0, 3, -5],
+    passive: '火值叠加减半；灼烧仅1回合。命中灼烧目标清空火值',
+    skills: [
+      { name: '水弹', cost: 0, target: 'one', desc: '单体10伤 +潮湿', use: (B, me, [t]) => { B.hit(me, t, { dmg: 10 }); B.addWet(t, 1); } },
+      { name: '漫雨', cost: 4, target: 'all', desc: '全体7伤', use: (B, me, ts) => ts.forEach((t) => B.hit(me, t, { dmg: 7 })) },
+      { name: '凝水护盾', cost: 3, target: 'ally1', desc: '己方单体减伤50%·1回合，清灼烧/中毒', use: (B, me, [t]) => { B.reduce(t, 0.5, 1); B.clearStatus(t, '灼烧'); B.clearStatus(t, '中毒'); } },
+      { name: '激流冲击', cost: 5, target: 'one', desc: '24伤；潮湿目标五成麻痹', use: (B, me, [t]) => { B.hit(me, t, { dmg: 24 }); if (t.wet > 0 && B.rnd() < 0.5) B.addStatus(t, '麻痹', 1); } },
+      { name: '洪涛湮灭', cost: 7, target: 'all', desc: '全体18伤，清全场火值与灼烧', use: (B, me, ts) => { ts.forEach((t) => B.hit(me, t, { dmg: 18 })); B.clearAllFire(); } },
+    ],
+  }),
+
+  凌风: C({
+    name: '凌风', element: '风', hp: 120, v: [20, 40], role: '刺客', sp: [2, 5, -3],
+    passive: '本回合未受伤时技能伤害+30%',
+    skills: [
+      { name: '风刃', cost: 0, target: 'one', desc: '单体10伤；未受伤则+30%', use: (B, me, [t]) => B.hit(me, t, { dmg: 10, mult: me.hurtThisRound ? 1 : 1.3 }) },
+      { name: '穿风刺', cost: 3, target: 'one', desc: '单体16伤', use: (B, me, [t]) => B.hit(me, t, { dmg: 16 }) },
+      { name: '风墙', cost: 4, target: 'self', desc: '本回合无敌', use: (B, me) => B.invuln(me, 1) },
+      { name: '裂风斩', cost: 5, target: 'two', desc: '两名各14伤；对火/毒/土+30%', use: (B, me, ts) => ts.forEach((t) => B.hit(me, t, { dmg: 14, mult: ['火', '毒', '土'].includes(t.element) ? 1.3 : 1 })) },
+      { name: '暴风眼', cost: 8, target: 'all', desc: '全体16伤', use: (B, me, ts) => ts.forEach((t) => B.hit(me, t, { dmg: 16 })) },
+    ],
+  }),
+
+  寒魄: C({
+    name: '寒魄', element: '冰', hp: 155, v: [10, 30], role: '坦克', sp: [-1, 2, -6],
+    passive: '受雷击雷值叠加减半',
+    skills: [
+      { name: '冰锤', cost: 0, target: 'one', desc: '单体10伤 +2冰值', use: (B, me, [t]) => B.hit(me, t, { dmg: 10, ele: ['冰', 2] }) },
+      { name: '寒霜护盾', cost: 3, target: 'self', desc: '自身护盾16·2回合', use: (B, me) => B.shield(me, 16, 2) },
+      { name: '冰裂斩', cost: 4, target: 'one', desc: '单体20伤 +3冰值', use: (B, me, [t]) => B.hit(me, t, { dmg: 20, ele: ['冰', 3] }) },
+      { name: '极寒领域', cost: 5, target: 'all', desc: '全体8伤 +2冰值；冰冻者额外8', use: (B, me, ts) => ts.forEach((t) => { B.hit(me, t, { dmg: 8, ele: ['冰', 2] }); if (B.hasStatus(t, '冰冻')) B.hit(me, t, { dmg: 8, part: false }); }) },
+      { name: '永冻之握', cost: 8, target: 'one', desc: '28伤；冰值≥6则冰冻1回合；自身回12', use: (B, me, [t]) => { B.hit(me, t, { dmg: 28 }); if (t.vals.冰 >= 6) B.addStatus(t, '冰冻', 1); B.heal(me, 12); } },
+    ],
+  }),
+
+  霆光: C({
+    name: '霆光', element: '雷', hp: 120, v: [22, 40], role: '射手', sp: [1, 4, -4],
+    passive: '攻击潮湿目标伤害×1.2（导电）',
+    skills: [
+      { name: '电击', cost: 0, target: 'one', desc: '单体10伤 +2雷值', use: (B, me, [t]) => B.hit(me, t, { dmg: 10, ele: ['雷', 2] }) },
+      { name: '雷矢', cost: 3, target: 'one', desc: '单体18伤 +3雷值', use: (B, me, [t]) => B.hit(me, t, { dmg: 18, ele: ['雷', 3] }) },
+      { name: '连锁闪电', cost: 4, target: 'one', desc: '主目标14伤 +相邻10，各+2雷值', use: (B, me, [t]) => { B.hit(me, t, { dmg: 14, ele: ['雷', 2] }); B.splash(me, t, 10, ['雷', 2]); } },
+      { name: '雷暴', cost: 5, target: 'all', desc: '全体10伤 +2雷值；潮湿再+6', use: (B, me, ts) => ts.forEach((t) => { B.hit(me, t, { dmg: 10, ele: ['雷', 2] }); if (t.wet > 0) B.hit(me, t, { dmg: 6, part: false }); }) },
+      { name: '万雷天牢', cost: 8, target: 'one', desc: '30伤 +相邻14；潮湿×1.6', use: (B, me, [t]) => { B.hit(me, t, { dmg: 30, mult: t.wet > 0 ? 1.6 : 1, ele: ['雷', 3] }); B.splash(me, t, 14); } },
+    ],
+  }),
+
+  蚀骸: C({
+    name: '蚀骸', element: '毒', hp: 150, v: [19, 43], role: '自残爆发', sp: [2, 5, -3],
+    passive: '每损失2HP永久+0.2%毒伤（上限25%）',
+    skills: [
+      { name: '噬皮', cost: 0, target: 'one', desc: '3段5伤 +毒值；自损4', use: (B, me, [t]) => { for (let i = 0; i < 3; i++) B.hit(me, t, { dmg: 5, ele: ['毒', 1] }); B.selfDamage(me, 4); } },
+      { name: '剐骨', cost: 5, target: 'one', desc: '21伤 +6毒值；自损12；割裂3回合', use: (B, me, [t]) => { B.hit(me, t, { dmg: 21, ele: ['毒', 6] }); B.selfDamage(me, 12); B.debuff(t, '割裂', 3); } },
+      { name: '血祭', cost: 3, target: 'self', desc: '自损15%最大生命，清自身减益，下次毒系技能翻倍', use: (B, me) => { B.selfDamage(me, Math.floor(me.maxHp * 0.15)); B.clearDebuffs(me); me.poisonBoost = true; } },
+      { name: '腐爆', cost: 6, target: 'one', desc: '引爆目标全部毒值，每点3固定毒伤', use: (B, me, [t]) => { const v = t.vals.毒; t.vals.毒 = 0; if (v > 0) B.hit(me, t, { dmg: v * 3, part: false }); } },
+      { name: '骸祭绝命', cost: 9, target: 'one', desc: '扣自身当前血量一半；目标+12毒值并强制中毒；目标血量低于自身已损失血则受其最大生命100%纯粹伤害', use: (B, me, [t]) => { B.selfDamage(me, Math.floor(me.hp / 2)); B.stackElement(me, t, '毒', 12); B.addStatus(t, '中毒', 3); if (t.hp < me.maxHp - me.hp) B.hit(me, t, { dmg: t.maxHp, part: false, pure: true }); } },
+    ],
+  }),
+
+  晨晖: C({
+    name: '晨晖', element: '光', hp: 135, v: [10, 33], role: '治疗', sp: [0, 3, -5],
+    passive: '每大回合开始净化自身1个减益；每层辉光+2%治疗',
+    skills: [
+      { name: '光耀', cost: 0, target: 'one', desc: '单体8伤 +1辉光', use: (B, me, [t]) => { B.hit(me, t, { dmg: 8 }); B.mark(me, '辉光', 1); } },
+      { name: '圣愈', cost: 3, target: 'ally1', desc: '回12；消耗2辉光再+5；清1个减益', use: (B, me, [t]) => { const bonus = B.useMark(me, '辉光', 2) ? 5 : 0; B.heal(me, t, 12 + bonus); B.popDebuff(t); } },
+      { name: '辉光屏障', cost: 4, target: 'allies', desc: '己方全体护盾8·2回合（辉光≥3则12）', use: (B, me, ts) => { const n = (me.marks.辉光 || 0) >= 3 ? 12 : 8; ts.forEach((t) => B.shield(t, n, 2)); } },
+      { name: '审判之矛', cost: 5, target: 'one', desc: '20伤 +2辉光；破甲1回合', use: (B, me, [t]) => { B.hit(me, t, { dmg: 20 }); B.mark(me, '辉光', 2); B.debuff(t, '破甲', 1); } },
+      { name: '圣辉降临', cost: 8, target: 'allies', desc: '全体回15 +锐锋2回合 +清全体减益', use: (B, me, ts) => { ts.forEach((t) => { B.heal(me, t, 15); B.buff(t, '锐锋', 2); B.clearDebuffs(t); }); } },
+    ],
+  }),
+
+  碧尘: C({
+    name: '碧尘', element: '无', hp: 145, v: [10, 35], role: '战士', sp: [1, 4, -4],
+    passive: '无元素抗性',
+    skills: [
+      { name: '撼地', cost: 0, target: 'one', desc: '单体8伤；自身+1气势', use: (B, me, [t]) => { B.hit(me, t, { dmg: 8 }); B.gainQi(me, 1); } },
+      { name: '冲山', cost: 5, target: 'two', desc: '主目标两段6伤，另一目标5伤', use: (B, me, [t1, t2]) => { B.hit(me, t1, { dmg: 6 }); B.hit(me, t1, { dmg: 6 }); if (t2 && t2 !== t1) B.hit(me, t2, { dmg: 5 }); } },
+      { name: '磊势', cost: 2, target: 'self', desc: '下回合冲山不耗气势', use: (B, me) => { me.freeChongshan = true; } },
+      { name: '裂地', cost: 5, target: 'two', desc: '两名各7伤', use: (B, me, ts) => ts.forEach((t) => B.hit(me, t, { dmg: 7 })) },
+      { name: '压顶', cost: 3, target: 'one', desc: '单体10伤 +相邻5溅射', use: (B, me, [t]) => { B.hit(me, t, { dmg: 10 }); B.splash(me, t, 5); } },
+    ],
+  }),
+};
+
+const ROSTER = Object.keys(CHARS);
+const roster = () => Object.keys(CHARS);
+
+// 多形态角色的技能→形态映射（第十五章）。变形后仅可用当前形态技能，舍弃常态技能。
+const SKILL_FORM = {
+  炎龙: { 封喉: '常态', 焰轮: '常态', 热血: '常态', 冲天: '常态', 燎原: '常态',
+    '贔屭負礎（神备）': '神备', '狻猊騰雲（神备）': '神备', '蒲牢鳴鍾（神备）': '神备', '睚眦雪恨（神备）': '神备', '饕餮饗食（神备）': '神备' },
+  乌川: { 挽澜: '常态', 朔风: '常态', 锋旋: '常态', 破土: '常态', 飒沓: '常态',
+    '扫尘（风形态）': '风', '狼星（风形态）': '风', '飙风（风形态）': '风', '乘风（风形态）': '风', '断云（风形态）': '风' },
+  皓霜: { 薄触: '常态', 拂袖: '常态', 甩袖: '常态', 掀寒: '常态', 白练: '常态',
+    '掷袖（雪域）': '雪域', '抛袖（雪域）': '雪域' },
+  玄渊: { 春荣: '常态', 旋刃: '常态', 冬枯: '常态', 翻芒: '常态', 云来: '常态',
+    '滞寒（云来）': '云来', '斩刃（云来）': '云来', '墨云（云来）': '云来', '断芒（云来）': '云来', '雾往（云来）': '云来' },
+  黯雷: { 奔霄: '常态', 旋光: '常态', 连电: '常态', 励雷: '常态', 激荡: '常态', '雷阵形态·藏蛰': '雷阵' },
+};
+
+/** 把 data/*.js 里的角色登记进引擎（可多次调用） */
+function registerChars(list) {
+  for (const c of list || []) {
+    if (!c || !c.name) continue;
+    CHARS[c.name] = {
+      name: c.name,
+      element: c.element,
+      maxHp: c.hp,
+      role: c.role,
+      passive: c.passive || '',
+      parts: { vital: c.vital, body: c.body, armor: 100 - c.vital - c.body },
+      sp: { init: c.spirit[0], max: c.spirit[1], min: c.spirit[2] },
+      skills: c.skills.map((s, i) => ({ id: i + 1, ...s, form: s.form || (SKILL_FORM[c.name] && SKILL_FORM[c.name][s.name]) || '常态' })),
+    };
+  }
+  return roster();
+}
+
+/* ---------------- 对局 ---------------- */
+function mkUnit(def, key, sideKey) {
+  return {
+    key,
+    side: sideKey,
+    name: def.name,
+    element: def.element,
+    role: def.role,
+    maxHp: def.maxHp,
+    hp: def.maxHp,
+    parts: def.parts,
+    spirit: def.sp.init,
+    spiritMax: def.sp.max,
+    spiritMin: def.sp.min,
+    qi: 0,
+    alive: true,
+    frozen: false,
+    acted: false,
+    actsUsed: 0,
+    zeroUsed: false,
+    wet: 0,
+    hurtThisRound: false,
+    dmgTaken: 0,
+    invuln: 0,
+    reduce: null,
+    shield: null,
+    buffs: [],
+    debuffs: [],
+    st: [],
+    vals: { 火: 0, 冰: 0, 雷: 0, 毒: 0, 木: 0, 金: 0, 光: 0, 暗: 0, 土: 0 },
+    marks: {},
+    weapon: (() => {
+      const w = WEAPONS[WEAPON_BY_CHAR[def.name]];
+      const max = w ? w.dur : WEAPON_DUR_BY_ROLE[def.role] || 10;
+      return { name: w ? w.name : '通用武器', max, dur: max, broken: false };
+    })(),
+    form: '常态',
+    ccDone: 0,
+    ccResist: 0,
+    ccWindow: 0,
+    frozenRounds: 0,
+    poisonBoost: false,
+    freeChongshan: false,
+  };
+}
+
+function mkSide(label, team, sideKey) {
+  return {
+    label,
+    units: team.map((ch, i) => {
+      const def = CHARS[ch];
+      if (!def) throw new Error(`未知角色：${ch}`);
+      return mkUnit(def, `${sideKey}-${i + 1}`, sideKey);
+    }),
+  };
+}
+
+function createBattle({ playerTeam, enemyTeam, seed = Date.now() >>> 0, first, env, reso } = {}) {
+  if (playerTeam.length !== 4) throw new Error('我方必须选 4 名角色');
+  if (enemyTeam.length !== 4) throw new Error('敌方必须 4 名角色');
+  const dup = new Set([...playerTeam, ...enemyTeam]);
+  if (dup.size !== 8) throw new Error('同一角色不能重复出场');
+
+  const B = { seed, rnd: makeRng(seed), round: 0, x: 1, phase: null, over: null, log: [], winnerNote: '' };
+  B.sides = { player: mkSide('你', playerTeam, 'player'), enemy: mkSide('我', enemyTeam, 'enemy') };
+  B.first = first || (B.rnd() < 0.5 ? 'player' : 'enemy');
+  B.env = env ? ENVIRONMENTS.find((e) => e.id === env) || ENVIRONMENTS[0] : ENVIRONMENTS[Math.floor(B.rnd() * ENVIRONMENTS.length)];
+  B.mods = () => (B.env && B.env.mods) || {};
+  // 元素共鸣：编队确定后自动检测候选，玩家可指定 1 种，否则取候选第一个
+  B.resoCandidates = { player: detectResonances(playerTeam), enemy: detectResonances(enemyTeam) };
+  B.reso = {
+    player: reso && B.resoCandidates.player.includes(reso) ? reso : B.resoCandidates.player[0] || null,
+    enemy: B.resoCandidates.enemy[0] || null,
+  };
+  B.rmods = (side) => {
+    const id = B.reso[side];
+    const r = id ? RESONANCES.find((x) => x.id === id) : null;
+    return (r && r.mods) || {};
+  };
+  B.over = null;
+  B.backwater = null;
+
+  /* 背水一战（第十八章）：每大回合开始独立判定，全局只触发 1 次 */
+  B.checkBackwater = () => {
+    if (B.backwater || B.round < 5) return;
+    for (const s of ['player', 'enemy']) {
+      const mine = B.live(B.sides[s].units);
+      const theirs = B.live(B.sides[B.other(s)].units);
+      if (mine.length !== 1 || theirs.length > 3) continue;
+      const u = mine[0];
+      if (u.hp > u.maxHp * 0.4) continue;
+      const chance = Math.min(0.8, Math.max(0.05, 1 - u.hp / u.maxHp));
+      if (B.rnd() > chance) continue;
+      u.hp = u.maxHp;
+      const dead = B.sides[s].units.find((x) => !x.alive);
+      if (dead) {
+        dead.alive = true;
+        dead.hp = Math.floor(dead.maxHp * 0.3);
+        dead.qi = 3;
+        B.log.push(`${dead.name} 因背水一战复苏`);
+      }
+      for (const x of B.sides[s].units) {
+        if (!x.alive) continue;
+        x.debuffs = [];
+        x.st = x.st.filter((st) => !ELEMENTAL_STATUS.includes(st.k));
+        if (x !== u) x.qi = 3;
+      }
+      for (const x of B.sides[B.other(s)].units) x.qi = Math.max(0, x.qi - 3);
+      B.backwater = { loser: s, until: B.round + 5, deadline: B.round + 7 };
+      B.log.push('【背水一战！限时 7 回合绝杀！】');
+      return;
+    }
+  };
+  B.rnd_ = null;
+
+  /* ---- 引擎内部工具（挂在 B 上，供技能使用） ---- */
+  B.other = (s) => (s === 'player' ? 'enemy' : 'player');
+  B.foesOf = (unit) => B.sides[B.other(unit.side)].units;
+  B.alliesOf = (unit) => B.sides[unit.side].units;
+  B.live = (units) => units.filter((u) => u.alive);
+  B.hasStatus = (u, k) => u.st.some((s) => s.k === k);
+  B.hasBuff = (u, k) => u.buffs.some((b) => b.k === k);
+  B.hasDebuff = (u, k) => u.debuffs.some((d) => d.k === k);
+
+  B.gainQi = (u, n) => { if (u.alive) u.qi = Math.max(0, u.qi + n); };
+
+  B.addStatus = (u, k, turns) => {
+    if (!u.alive) return;
+    const am = B.rmods(B.other(u.side));
+    // 控制条例 19.3 / 19.6：控制抗性、无敌免疫、每回合硬控次数上限、递减
+    if (HARD_CC.includes(k)) {
+      if (u.ccResist > 0) { B.log.push(`${u.name} 处于控制抗性，${k} 无效`); return; }
+      if (u.invuln > 0) { B.log.push(`${u.name} 处于无敌，${k} 无效`); return; }
+      if (u.ccDone >= 1) { B.log.push(`${u.name} 本大回合已被硬控过，${k} 不生效`); return; }
+      const used = (B.ccThisRound && B.ccThisRound[u.side]) || 0;
+      if (used >= 2) { B.log.push(`本方本回合硬控已达 2 次上限，${k} 不生效`); return; }
+      if ((u.ccWindow || 0) >= 2) { turns = Math.max(1, turns - 1); B.log.push('连续控制递减：持续 -1 回合'); }
+      u.ccDone += 1;
+      u.ccWindow = (u.ccWindow || 0) + 1;
+      B.ccThisRound = B.ccThisRound || {};
+      B.ccThisRound[u.side] = used + 1;
+      if (k === '冰冻') turns = Math.max(1, turns + (am.freezeTurnsAdd || 0));
+    }
+    const exist = u.st.find((s) => s.k === k);
+    if (exist) { exist.t = Math.max(exist.t, turns); exist.fresh = true; return; }
+    // 元素异常共存上限：默认 2 种，共鸣可放宽到 3
+    const cur = u.st.filter((s) => ELEMENTAL_STATUS.includes(s.k));
+    const maxN = B.rmods(u.side).maxStatus || 2;
+    if (ELEMENTAL_STATUS.includes(k) && cur.length >= maxN) {
+      const oldest = cur[0];
+      u.st = u.st.filter((s) => s !== oldest);
+      B.log.push(`${u.name} 被新的${k}覆盖了${oldest.k}`);
+    }
+    u.st.push({ k, t: turns, fresh: true });
+    B.log.push(`${u.name} 陷入【${k}】${turns}回合`);
+  };
+
+  B.clearStatus = (u, k) => { u.st = u.st.filter((s) => s.k !== k); };
+
+  B.buff = (u, k, turns) => {
+    if (!u.alive) return;
+    const e = u.buffs.find((b) => b.k === k);
+    if (e) { e.t = Math.max(e.t, turns); e.fresh = true; return; }
+    if (u.buffs.length >= 2) u.buffs.shift();
+    u.buffs.push({ k, t: turns, fresh: true });
+  };
+
+  B.debuff = (u, k, turns) => {
+    if (!u.alive) return;
+    const e = u.debuffs.find((d) => d.k === k);
+    if (e) { e.t = Math.max(e.t, turns); e.fresh = true; return; }
+    if (u.debuffs.length >= 2) u.debuffs.shift();
+    u.debuffs.push({ k, t: turns, fresh: true });
+  };
+
+  B.clearDebuffs = (u) => { u.debuffs = []; };
+  B.popDebuff = (u) => { u.debuffs.shift(); };
+
+  B.mark = (u, k, n) => { u.marks[k] = clamp((u.marks[k] || 0) + n, 0, 99); };
+  B.stack = (u, k, n = 1) => { u.stacks = u.stacks || {}; u.stacks[k] = clamp((u.stacks[k] || 0) + n, 0, 99); };
+  B.doubleNext = (u) => { u.doubleNext = true; };
+  B.useMark = (u, k, n) => {
+    if ((u.marks[k] || 0) < n) return false;
+    u.marks[k] -= n;
+    return true;
+  };
+
+  B.heal = (src, u, n) => {
+    if (!u.alive || n <= 0) return 0;
+    const bonus = src && src.marks && src.marks.辉光 ? 1 + src.marks.辉光 * 0.02 : 1;
+    const amount = Math.max(1, Math.floor(n * bonus * (B.mods().heal || 1) * (B.rmods(src && src.side).healMult || 1))) + ((wdef(src) && wdef(src).mods.healAdd) || 0);
+    const before = u.hp;
+    u.hp = Math.min(u.maxHp, u.hp + amount);
+    const real = u.hp - before;
+    if (real > 0) B.log.push(`${u.name} 回复 ${real} 血`);
+    return real;
+  };
+
+  B.shield = (u, n, turns) => {
+    if (!u.alive) return;
+    const mult = B.rmods(u.side).shieldMult || 1;
+    const wm = wdef(u);
+    const amount = Math.floor(n * mult * ((wm && wm.mods && wm.mods.shieldMult) || 1));
+    u.shield = { n: (u.shield && u.shield.t > 0 ? u.shield.n : 0) + amount, t: turns };
+    B.log.push(`${u.name} 获得 ${amount} 点护盾`);
+  };
+
+  B.reduce = (u, pct, turns) => { u.reduce = { pct, t: turns }; B.log.push(`${u.name} 减伤 ${Math.round(pct * 100)}%`); };
+  B.invuln = (u, turns) => { u.invuln = Math.max(u.invuln, turns); B.log.push(`${u.name} 进入无敌`); };
+  B.addWet = (u, turns) => { u.wet = Math.max(u.wet, turns); B.log.push(`${u.name} 附加潮湿`); };
+
+  B.clearAllFire = () => {
+    for (const s of [B.sides.player, B.sides.enemy]) {
+      for (const u of s.units) { u.vals.火 = 0; u.st = u.st.filter((x) => x.k !== '灼烧'); }
+    }
+    B.log.push('全场火值与灼烧被清空');
+  };
+
+  B.selfDamage = (u, n) => {
+    if (!u.alive) return;
+    u.hp = Math.max(1, u.hp - n);
+    B.log.push(`${u.name} 自损 ${n} 血`);
+  };
+
+  B.stackElement = (atk, def, kind, val) => {
+    if (!def.alive || val <= 0) return;
+    const res = RESIST[def.element] || {};
+    const eff = res.applyToMe && res.applyToMe[kind] ? res.applyToMe[kind] : 1;
+    const v = Math.max(1, Math.floor(val * eff));
+    const m = B.mods();
+    let vv = v;
+    if (kind === '火') {
+      if (m.fireValExtra) vv += m.fireValExtra;
+      if (m.fireValMinus) vv = Math.max(1, vv - m.fireValMinus);
+      if (m.fireValHalf) vv = Math.max(1, Math.floor(vv / 2));
+    }
+    if (kind === '冰' && m.iceValExtra) vv += m.iceValExtra;
+    if (kind === '毒' && m.poisonGain) vv = Math.max(1, Math.floor(vv * m.poisonGain));
+    if (kind === '光' && m.lightGain) vv = Math.ceil(vv * (1 + m.lightGain));
+    if (kind === '暗' && m.darkGain) vv += m.darkGain;
+    const wa = wdef(atk);
+    if (wa && wa.mods) {
+      if (kind === '火' && wa.mods.fireValAdd) vv += wa.mods.fireValAdd;
+      if (kind === '冰' && wa.mods.iceValAdd) vv += wa.mods.iceValAdd;
+    }
+    const wv = wdef(def);
+    if (wv && wv.mods && wv.mods.elemTakeMinus && def !== atk) vv = Math.max(1, vv - wv.mods.elemTakeMinus);
+    def.vals[kind] = (def.vals[kind] || 0) + vv;
+    B.log.push(`${def.name} +${v}${kind}值（${def.vals[kind]}）`);
+    const ab = ABNORMAL[kind];
+    if (def.vals[kind] >= ab.th) {
+      def.vals[kind] = 0;
+      let turns = ab.turns;
+      if (kind === '火' && RESIST[def.element] && RESIST[def.element].burnTurns) turns = RESIST[def.element].burnTurns;
+      B.addStatus(def, ab.name, turns);
+    }
+  };
+
+  B.splash = (atk, target, dmg, ele) => {
+    const foes = B.foesOf(target);
+    const idx = foes.indexOf(target);
+    if (idx < 0) return;
+    [foes[idx - 1], foes[idx + 1]].forEach((u) => { if (u && u.alive) B.hit(atk, u, { dmg, ele }); });
+  };
+
+  B.hit = (atk, target, o = {}) => {
+    if (!target || !target.alive) return 0;
+    if (!atk.alive && !o.force) return 0;
+    atk._seg = (atk._seg || 0) + 1;
+    let part = 'body';
+    if (o.part !== false) {
+      const r = B.rnd() * 100;
+      const v = target.parts.vital + (B.hasStatus(target, '冰冻') ? -10 : 0);
+      part = r < v ? 'vital' : r < v + target.parts.body ? 'body' : 'armor';
+    }
+    let dmg = o.dmg;
+    if (o.mult) dmg *= o.mult;
+    if (atk.poisonBoost && o.ele && o.ele[0] === '毒') { dmg *= 2; atk.poisonBoost = false; B.log.push('血祭加持 ×2'); }
+    if (o.part !== false) dmg *= PART_MULT[part];
+
+    // 常驻/气韵
+    dmg *= 1 + atk.spirit * 0.02;
+    // 临时增益
+    if (B.hasBuff(atk, '锐锋')) dmg *= 1.25;
+    if (B.hasBuff(atk, '狂怒')) dmg *= 1.4;
+    if (B.hasBuff(atk, '贯通') && o.aoe) dmg *= 1.3;
+    if (atk.stacks && atk.stacks.愈战) dmg *= 1 + atk.stacks.愈战 * 0.04;
+    if (atk.doubleNext) { dmg *= 2; atk.doubleNext = false; }
+    // 敌方易伤
+    if (B.hasDebuff(target, '破甲')) dmg *= 1.2;
+    if (B.hasStatus(target, '雷罚')) dmg *= 1.3;
+    if (B.hasStatus(target, '锈蚀')) dmg *= 1.15;
+    if (B.hasStatus(atk, '诅咒')) dmg *= 0.85;
+    const skEl = o.ele ? o.ele[0] : atk.element;
+    const taken = (RESIST[target.element] && RESIST[target.element].dmgTaken) || {};
+    if (taken[skEl]) dmg *= 1 + taken[skEl];
+    if (skEl === '土' && B.hasStatus(target, '重压')) dmg *= 1.25;
+    if (skEl === '光' && B.hasStatus(target, '辉耀')) dmg *= 1.25;
+    if (skEl === '火' && B.mods().fireDmg) dmg *= 1 + B.mods().fireDmg;
+    if (skEl === '水' && B.mods().waterDmg) dmg *= 1 + B.mods().waterDmg;
+    // 元素共鸣
+    const rmA = B.rmods(atk.side);
+    const rmT = B.rmods(target.side);
+    if (skEl === '火' && rmA.fireDmg) dmg *= 1 + rmA.fireDmg;
+    if (skEl === '水' && rmA.waterDmg) dmg *= 1 + rmA.waterDmg;
+    if (skEl === '土' && rmA.earthDmg) dmg *= 1 + rmA.earthDmg;
+    if (skEl === '无' && rmA.wuDmg) dmg *= 1 + rmA.wuDmg;
+    if (skEl === '暗' && rmA.curseDmg) dmg *= 1 + rmA.curseDmg;
+    if (rmA.armorDmg) dmg *= 1 + rmA.armorDmg;
+    if (rmT.dmgTakenMult) dmg *= rmT.dmgTakenMult;
+    if (B.backwater && B.round <= B.backwater.until) {
+      if (atk.side === B.backwater.loser) dmg *= 1.3;
+      else dmg *= 0.9;
+      if (target.side === B.backwater.loser) dmg *= 0.9;
+      else dmg *= 1.2;
+    }
+    const wstage = weaponStage(atk);
+    if (wstage === 'intact') dmg *= 1.1;
+    else if (wstage === 'cracked') dmg *= 1.05;
+    const wd = wdef(atk);
+    if (wd && wd.mods) {
+      if (wd.mods.dmgPct) dmg *= 1 + wd.mods.dmgPct;
+      if (wd.mods.dmgPctLow && atk.hp < atk.maxHp * wd.mods.dmgPctLow.below) dmg *= 1 + wd.mods.dmgPctLow.pct;
+    }
+    // 削弱
+    if (B.hasDebuff(atk, '挫志')) dmg *= 0.75;
+    // 个人减伤
+    if (target.reduce && target.reduce.t > 0) dmg *= 1 - target.reduce.pct;
+    // 元素反应（蒸发/导电）：扣血前结算倍率
+    if (o.ele) {
+      const [kind] = o.ele;
+      if (kind === '火' && target.wet > 0) { dmg *= 1.4; target.wet = 0; B.log.push('蒸发 ×1.4'); }
+      else if (kind === '雷' && target.wet > 0) { dmg *= 1.2; target.wet = 0; B.log.push('导电 ×1.2'); }
+    }
+    // 无敌
+    if (target.invuln > 0) dmg = 0;
+
+    dmg = Math.max(0, Math.floor(dmg));
+
+    // 护盾
+    if (dmg > 0 && target.shield && target.shield.t > 0 && target.shield.n > 0) {
+      const absorb = Math.min(target.shield.n, dmg);
+      target.shield.n -= absorb;
+      dmg -= absorb;
+      if (target.shield.n <= 0) target.shield = null;
+      B.log.push(`${target.name} 护盾吸收 ${absorb}`);
+    }
+
+    if (dmg > 0) {
+      target.hp = Math.max(0, target.hp - dmg);
+      target.hurtThisRound = true;
+      target.dmgTaken = (target.dmgTaken || 0) + dmg;
+      B.log.push(`${atk.name}→${target.name} ${part === 'vital' ? '要害' : part === 'armor' ? '护甲' : '身体'} ${dmg}伤${o.pure ? '(纯粹)' : ''}`);
+    } else {
+      B.log.push(`${atk.name}→${target.name} 未造成伤害`);
+    }
+
+    // 割裂
+    if (dmg > 0 && B.hasDebuff(target, '割裂')) {
+      target.hp = Math.max(0, target.hp - 6);
+      B.log.push(`${target.name} 割裂 -6`);
+    }
+
+    // 元素叠加（完全未造成伤害则不叠）
+    if (o.ele && dmg > 0) {
+      let [kind, val] = o.ele;
+      if (part === 'vital') val = Math.ceil(val * 1.5);
+      if (part === 'armor') val = Math.max(0, val - 1);
+      if (kind === '冰' && target.wet > 0 && target.vals.冰 >= 6) { target.wet = 0; B.addStatus(target, '冰冻', 1); }
+      B.stackElement(atk, target, kind, val);
+      if (rmA.randomElement) {
+        const extra = ['火', '冰', '雷'][Math.floor(B.rnd() * 3)];
+        B.stackElement(atk, target, extra, 1);
+      }
+    }
+
+    if (target.hp <= 0) B.kill(target);
+    return dmg;
+  };
+
+  B.kill = (u) => {
+    if (!u.alive) return;
+    u.alive = false;
+    u.hp = 0;
+    u.qi = 0;
+    u.st = [];
+    u.buffs = [];
+    u.debuffs = [];
+    u.shield = null;
+    u.vals = { 火: 0, 冰: 0, 雷: 0, 毒: 0 };
+    B.log.push(`${u.name} 阵亡`);
+  };
+
+  beginRound(B);
+  if (B.mods().wetAll) {
+    for (const s of [B.sides.player, B.sides.enemy]) for (const u of s.units) u.wet = Math.max(u.wet, B.mods().wetAll);
+  }
+  // 后手方开局额外 +2 气势（第二章，一次性补偿）
+  const secondSide = B.other(B.first);
+  for (const u of B.sides[secondSide].units) if (u.alive) u.qi += 2;
+  B.log.push(`${B.sides[secondSide].label}（后手）开局 +2 气势`);
+  return B;
+}
+
+/* ---------------- 回合流程 ---------------- */
+function beginRound(B) {
+  B.round += 1;
+  B.x = Math.min(2, 1 + Math.floor((B.round - 1) / 4));
+  B.log.push(`—— 第 ${B.round} 大回合开始（气势基数 x=${B.x}）——`);
+
+  // 1. DOT
+  for (const side of [B.sides.player, B.sides.enemy]) {
+    for (const u of side.units) {
+      if (!u.alive) continue;
+      // 休整回耐：上一大回合没有释放技能则 +2（受不可逆损坏上限约束）
+      if (!u.acted && u.weapon && u.weapon.dur > 0) {
+        const half = u.weapon.max * 0.5;
+        const cap = u.weapon.dur < half ? (u.weapon.dur < 4 ? 0 : 7) : u.weapon.max;
+        if (cap > 0) u.weapon.dur = Math.min(cap, u.weapon.dur + 2);
+      }
+      u.hurtThisRound = false;
+      u.dmgTaken = 0;
+      u.acted = false;
+      u.actsUsed = 0;
+      u.zeroUsed = false;
+      u.ccDone = 0;
+      u.wear = 0;
+      for (const s of u.st) {
+        if (!s.t || s.t <= 0) continue;
+        if (s.k === '灼烧') {
+          const am = B.rmods(B.other(u.side));
+          const dot = (RESIST[u.element] && RESIST[u.element].burnDot ? 2 : 5) + (am.burnDotAdd || 0);
+          u.hp = Math.max(0, u.hp - dot);
+          B.log.push(`${u.name} 灼烧 -${dot}`);
+        } else if (s.k === '中毒') {
+          const am = B.rmods(B.other(u.side));
+          const dot = 3 + (am.poisonDotAdd || 0);
+          u.hp = Math.max(0, u.hp - dot);
+          B.log.push(`${u.name} 中毒 -${dot}`);
+        } else if (s.k === '缠绕') {
+          u.hp = Math.max(0, u.hp - 3);
+          B.log.push(`${u.name} 缠绕 -3`);
+        }
+      }
+      // 印记类回合钩子：缫丝（给随机敌方挂虫卵）／毒瘴（敌方全体 +2 毒）
+      if (u.marks.缫丝 > 0) {
+        const foes = B.live(B.foesOf(u));
+        if (foes.length) {
+          const t = foes[Math.floor(B.rnd() * foes.length)];
+          B.mark(t, '虫卵', 1);
+          B.log.push(`${u.name} 的缫丝给 ${t.name} 挂上虫卵`);
+        }
+        u.marks.缫丝 -= 1;
+      }
+      if (u.marks.毒瘴 > 0) {
+        for (const t of B.live(B.foesOf(u))) B.stackElement(u, t, '毒', 2);
+        u.marks.毒瘴 -= 1;
+      }
+      if (u.hp <= 0) B.kill(u);
+    }
+  }
+
+  // 2. 冰冻锁定
+  for (const side of [B.sides.player, B.sides.enemy]) {
+    for (const u of side.units) {
+      u.frozen = u.alive && (B.hasStatus(u, '冰冻') || B.hasStatus(u, '麻痹'));
+    }
+  }
+
+  // 3. 发放气势
+  for (const side of [B.sides.player, B.sides.enemy]) {
+    for (const u of side.units) {
+      if (!u.alive || u.frozen) continue;
+      u.qi += B.x;
+      if (B.hasStatus(u, '诅咒')) u.qi = Math.max(0, u.qi - 1);
+    }
+  }
+
+  // 4. 元素共鸣回合结算
+  B.ccThisRound = {};
+  for (const sideKey of ['player', 'enemy']) {
+    const rm = B.rmods(sideKey);
+    const foeSide = B.sides[B.other(sideKey)];
+    for (const u of B.sides[sideKey].units) {
+      if (!u.alive) continue;
+      if (u.ccWindow > 0) u.ccWindow -= 1;
+      if (rm.markAuto) B.mark(u, rm.markAuto, 1);
+      if (rm.healPerRound) u.hp = Math.min(u.maxHp, u.hp + rm.healPerRound);
+      if (rm.qiPerRound) u.qi += rm.qiPerRound;
+      if (rm.purgePerRound && u.debuffs.length) {
+        const d = u.debuffs.shift();
+        B.log.push(`${u.name} 共鸣驱散【${d.k}】`);
+      }
+    }
+    if (rm.enemyQiDrain) {
+      for (const t of B.live(foeSide.units)) t.qi = Math.max(0, t.qi - rm.enemyQiDrain);
+    }
+  }
+
+  // 5. 环境回合结算
+  const m = B.mods();
+  if (B.env) B.log.push(`环境【${B.env.name}】生效`);
+  for (const sideKey of ['player', 'enemy']) {
+    const otherKey = B.other(sideKey);
+    for (const u of B.sides[sideKey].units) {
+      if (!u.alive) continue;
+      if (m.dotAll) { u.hp = Math.max(0, u.hp - m.dotAll); B.log.push(`${u.name} 冻伤 -${m.dotAll}`); }
+      if (m.waterSelfDot && u.element === '水') { u.hp = Math.max(0, u.hp - m.waterSelfDot); B.log.push(`${u.name} 环境灼伤 -${m.waterSelfDot}`); }
+      if (m.wetThunder && u.wet > 0) B.stackElement(u, u, '雷', m.wetThunder);
+      if (m.weaponWear3 && B.round % 3 === 0 && u.weapon && u.weapon.dur > 0) {
+        u.weapon.dur = Math.max(0, u.weapon.dur - 1);
+        B.log.push(`${u.name} 的武器被环境磨损 1 点`);
+      }
+      if (u.hp <= 0) B.kill(u);
+    }
+    if (m.poisonPerRound) {
+      for (const t of B.live(B.sides[otherKey].units)) {
+        if (m.poisonPerRound > 0) B.stackElement(t, t, '毒', m.poisonPerRound);
+        else if ((t.vals.毒 || 0) > 0) t.vals.毒 = Math.max(0, t.vals.毒 + m.poisonPerRound);
+      }
+    }
+  }
+
+  B.phase = B.first;
+  B.checkBackwater();
+  checkWin(B);
+}
+
+function act(B, sideKey, actions) {
+  if (B.over) throw new Error('对局已经结束，用 mayhem_board 看盘面');
+  if (B.phase !== sideKey) throw new Error(`现在不是${sideKey === 'player' ? '你' : '我'}的行动阶段`);
+
+  const side = B.sides[sideKey];
+
+  // 预校验整批动作：全部合法才开始执行，避免半途报错留下残局
+  const preview = new Map();
+  for (const a of actions || []) {
+    const u = side.units.find((x) => x.alive && (x.name === a.unit || x.key === a.unit));
+    if (!u) throw new Error(`没有可行动的角色：${a.unit}`);
+    if (u.frozen) throw new Error(`${u.name} 被冰冻/麻痹，无法行动`);
+    const st = preview.get(u) || { acts: 0, zero: false, qi: u.qi };
+    if (st.acts >= 2) throw new Error(`${u.name} 本回合的 2 次操作已经用完`);
+    if (B.round === 1 && sideKey === B.first && st.acts >= 1) throw new Error('第 1 大回合先手方每名角色只能操作 1 次');
+    const sk = CHARS[u.name].skills.find((s) => (s.name === a.skill || s.id === Number(a.skill)) && (s.form || '常态') === (u.form || '常态'));
+    if (!sk) {
+      const known = CHARS[u.name].skills.some((s) => s.name === a.skill || s.id === Number(a.skill));
+      throw new Error(known ? `${u.name} 的【${a.skill}】在当前形态下不可用` : `${u.name} 没有技能：${a.skill}`);
+    }
+    let c = sk.name === '冲山' && u.freeChongshan ? 0 : sk.cost;
+    if (c >= 5 && u.element === '雷' && B.mods().thunderUlt) c = Math.max(0, c - B.mods().thunderUlt);
+    if (c >= 5 && B.hasDebuff(u, '封印')) throw new Error(`${u.name} 被封印，无法释放 ${c} 费技能`);
+    if (B.round === 1 && sideKey === B.first && c >= 7) throw new Error(`第 1 大回合先手方不能用 ${c} 费技能`);
+    if (c > st.qi) throw new Error(`${u.name} 气势不足：${sk.name} 需 ${c}，现有 ${st.qi}`);
+    if (c === 0 && (st.zero || u.zeroUsed)) throw new Error(`${u.name} 本回合的 0 费技能已经用过了`);
+    st.qi -= c;
+    st.acts += 1;
+    if (c === 0) st.zero = true;
+    preview.set(u, st);
+  }
+
+  for (const a of actions || []) {
+    const u = side.units.find((x) => x.alive && (x.name === a.unit || x.key === a.unit));
+    if (!u) throw new Error(`没有可行动的角色：${a.unit}`);
+    if (u.frozen) throw new Error(`${u.name} 被冰冻/麻痹，无法行动`);
+    if (u.actsUsed >= 2) throw new Error(`${u.name} 本回合的 2 次操作已经用完`);
+    if (B.round === 1 && sideKey === B.first && u.actsUsed >= 1) throw new Error('第 1 大回合先手方每名角色只能操作 1 次');
+
+    const skill = u.name && CHARS[u.name].skills.find((s) => (s.name === a.skill || s.id === Number(a.skill)) && (s.form || '常态') === (u.form || '常态'));
+    if (!skill) throw new Error(`${u.name} 没有技能或该技能在当前形态下不可用：${a.skill}`);
+
+    let cost = skill.name === '冲山' && u.freeChongshan ? 0 : skill.cost;
+    if (cost >= 5 && u.element === '雷' && B.mods().thunderUlt) cost = Math.max(0, cost - B.mods().thunderUlt);
+    if (cost >= 5 && B.hasDebuff(u, '封印')) throw new Error(`${u.name} 被封印，无法释放 ${cost} 费技能`);
+    // 先手限制（第一章）：第 1 大回合先手方不能用 ≥7 费技能
+    if (B.round === 1 && sideKey === B.first && cost >= 7) {
+      throw new Error(`第 1 大回合先手方不能用 ${cost} 费技能`);
+    }
+    if (cost > u.qi) throw new Error(`${u.name} 气势不足：${skill.name} 需 ${cost}，现有 ${u.qi}`);
+    if (cost === 0 && u.zeroUsed) throw new Error(`${u.name} 本回合的 0 费技能已经用过了`);
+    if (cost === 0) u.zeroUsed = true;
+    u.qi -= cost;
+    if (skill.name === '冲山') u.freeChongshan = false;
+
+    const foes = B.foesOf(u);
+    const mates = B.alliesOf(u);
+    const pos = (n) => {
+      const arr = skill.target === 'ally1' || skill.target === 'allies' ? mates : foes;
+      const t = arr[Number(n) - 1];
+      if (t && t.alive) return t;
+      const first = arr.find((x) => x.alive);
+      if (first) { B.log.push(`目标位置 ${n} 已阵亡，改打 ${first.name}`); return first; }
+      throw new Error(`目标位置 ${n} 不可用`);
+    };
+
+    let targets = [];
+    const want = (a.targets || []).map((n) => pos(n));
+    if (skill.target === 'one') { if (!want.length) throw new Error(`${skill.name} 需要 1 个目标`); targets = [want[0]]; }
+    else if (skill.target === 'two') { if (want.length < 1) throw new Error(`${skill.name} 需要 1-2 个目标`); targets = want.slice(0, 2); }
+    else if (skill.target === 'all') targets = B.live(foes);
+    else if (skill.target === 'allies') targets = B.live(mates);
+    else if (skill.target === 'ally1') { if (!want.length) throw new Error(`${skill.name} 需要 1 个己方目标`); targets = [want[0]]; }
+    else if (skill.target === 'self') targets = [u];
+
+    const spent = new Map(foes.map((f) => [f, f.dmgTaken]));
+    const aliveBefore = foes.filter((f) => f.alive).length;
+    B.log.push(`${u.name} 使用【${skill.name}】(耗${cost})`);
+    u._seg = 0;
+    skill.use(B, u, targets);
+    u.acted = true;
+    u.actsUsed += 1;
+    u.wear = (cost >= 5 ? 1 : 0) + (u._seg >= 3 ? 1 : 0);
+
+    // 气韵：命中敌方 +1；被击 -1
+    if (['one', 'two', 'all'].includes(skill.target)) u.spirit = clamp(u.spirit + 1, u.spiritMin, u.spiritMax);
+    for (const f of foes) if (f.alive && f.dmgTaken > (spent.get(f) || 0)) f.spirit = clamp(f.spirit - 1, f.spiritMin, f.spiritMax);
+
+    // 击杀额外 +1 气势
+    const killed = aliveBefore - foes.filter((f) => f.alive).length;
+    if (killed > 0) u.qi += killed;
+
+    checkWin(B);
+    if (B.over) break;
+  }
+
+  if (B.over) return B;
+
+  const other = B.other(sideKey);
+  if (sideKey === B.first) {
+    B.phase = other;
+  } else {
+    endRound(B);
+    if (!B.over) beginRound(B);
+  }
+  return B;
+}
+
+function endRound(B) {
+  for (const side of [B.sides.player, B.sides.enemy]) {
+    for (const u of side.units) {
+      if (!u.alive) continue;
+      // 持续时间 -1
+      if (u.ccResist > 0) u.ccResist -= 1;
+      const ccBefore = u.st.filter((s) => HARD_CC.includes(s.k)).map((s) => s.k);
+      u.st = u.st.filter((s) => { if (s.fresh) { s.fresh = false; return true; } s.t -= 1; return s.t > 0; });
+      for (const k of ccBefore) {
+        if (!u.st.some((s) => s.k === k)) {
+          u.ccResist = 1;
+          B.log.push(`${k}结束，${u.name} 获得控制抗性 1 回合`);
+        }
+      }
+      u.buffs = u.buffs.filter((b) => { if (b.fresh) { b.fresh = false; return true; } b.t -= 1; return b.t > 0; });
+      u.debuffs = u.debuffs.filter((d) => { if (d.fresh) { d.fresh = false; return true; } d.t -= 1; return d.t > 0; });
+      // 多形态结算：炎龙神备（血量≤1/3回合末自动进入）；黯雷雷阵（3回合到期退回常态）
+      if (u.name === '炎龙' && u.form === '常态' && u.hp > 0 && u.hp <= Math.floor(u.maxHp / 3)) {
+        u.form = '神备';
+        B.log.push('炎龙 血量降至 1/3，进入【神备】形态');
+      }
+      if (u.form === '雷阵' && !B.hasBuff(u, '雷阵')) {
+        u.form = '常态';
+        B.log.push('黯雷 退出【雷阵】形态');
+      }
+      if (u.invuln > 0) u.invuln -= 1;
+      if (u.reduce) { u.reduce.t -= 1; if (u.reduce.t <= 0) u.reduce = null; }
+      if (u.shield) { u.shield.t -= 1; if (u.shield.t <= 0) u.shield = null; }
+      if (u.wet > 0) u.wet -= 1;
+
+      // 自动回血：存活、未冰冻、血量 <65%，回 8% 最大生命
+      if (!u.frozen && u.hp > 0 && u.hp < u.maxHp * 0.65) {
+        const heal = Math.floor(u.maxHp * 0.08);
+        u.hp = Math.min(u.maxHp, u.hp + heal);
+      }
+      // 武器耐久损耗
+      if (u.weapon && u.weapon.dur > 0 && u.wear) {
+        const mult = B.rmods(u.side).weaponWearMult || 1;
+        u.weapon.dur = Math.max(0, u.weapon.dur - Math.max(1, Math.floor(u.wear * mult)));
+        if (u.weapon.dur <= 0) B.log.push(`${u.name} 的武器破碎`);
+      }
+    }
+  }
+  // 破碎亡语：敌方全体固定伤害
+  for (const side of [B.sides.player, B.sides.enemy]) {
+    for (const u of side.units) {
+      if (!u.alive || !u.weapon || u.weapon.broken || u.weapon.dur > 0) continue;
+      u.weapon.broken = true;
+      const wd = wdef(u);
+      B.log.push(`${u.name} 的${u.weapon.name}破碎，亡语爆发`);
+      if (wd && wd.wake) {
+        try { wd.wake(B, u); } catch (err) { B.log.push(`亡语结算异常：${err.message}`); }
+      } else {
+        for (const f of B.foesOf(u)) if (f.alive) B.hit(u, f, { dmg: WEAPON_WAKE_DMG, part: false, force: true });
+      }
+    }
+  }
+  checkWin(B, true);
+}
+
+function checkWin(B, atRoundEnd = false) {
+  if (B.over) return B.over;
+  const p = B.live(B.sides.player.units).length;
+  const e = B.live(B.sides.enemy.units).length;
+  if (p === 0 && e === 0) { B.over = { winner: 'draw', reason: '双方最后存活角色同时倒下，平局' }; return B.over; }
+  if (e === 0) { B.over = { winner: 'player', reason: '敌方 4 人全部阵亡' }; return B.over; }
+  if (p === 0) { B.over = { winner: 'enemy', reason: '我方 4 人全部阵亡' }; return B.over; }
+  if (atRoundEnd && p - e >= 3) { B.over = { winner: 'player', reason: `人数差：你 ${p} 人 vs 我 ${e} 人` }; return B.over; }
+  if (atRoundEnd && e - p >= 3) { B.over = { winner: 'enemy', reason: `人数差：我 ${e} 人 vs 你 ${p} 人` }; return B.over; }
+  return null;
+}
+
+/* ---------------- 展示 ---------------- */
+const statusText = (u) => {
+  const bits = [];
+  for (const s of u.st) bits.push(`${s.k}${s.t}`);
+  for (const b of u.buffs) bits.push(`${b.k}${b.t}`);
+  for (const d of u.debuffs) bits.push(`${d.k}${d.t}`);
+  if (u.shield && u.shield.t > 0) bits.push(`盾${u.shield.n}`);
+  if (u.weapon && u.weapon.dur < u.weapon.max) bits.push(`器${u.weapon.dur}`);
+  if (u.invuln > 0) bits.push('无敌');
+  if (u.wet > 0) bits.push(`潮湿${u.wet}`);
+  const vals = Object.entries(u.vals).filter(([, v]) => v > 0).map(([k, v]) => `${k}${v}`);
+  if (vals.length) bits.push(`[${vals.join(' ')}]`);
+  return bits.length ? bits.join(' ') : '—';
+};
+
+function render(B, viewer = 'player') {
+  const lines = [];
+  const who = B.over ? '对局结束' : B.phase === 'player' ? '你的行动阶段' : '我的行动阶段';
+  lines.push(`第${B.round}大回合 · ${who} · 先手=${B.first === 'player' ? '你' : '我'} · x=${B.x} · 环境=${B.env ? B.env.name : '无'}`);
+  if (B.reso) lines.push(`共鸣：你【${B.reso.player || '无'}】/ 我【${B.reso.enemy || '无'}】`);
+  for (const key of ['player', 'enemy']) {
+    const side = B.sides[key];
+    lines.push(`【${side.label}】`);
+    side.units.forEach((u, i) => {
+      if (!u.alive) { lines.push(` ${i + 1} ${u.name} 已阵亡`); return; }
+      const st = statusText(u);
+      lines.push(` ${i + 1} ${u.name}(${u.element}) ${u.hp}/${u.maxHp} 气${u.qi} 韵${u.spirit > 0 ? '+' : ''}${u.spirit} ${st}`);
+    });
+    if (key === 'player') {
+      const ready = side.units.filter((u) => u.alive && u.actsUsed < 2 && !u.frozen);
+      for (const u of ready) {
+        lines.push(`  ${u.name}：${CHARS[u.name].skills.map((s) => `${s.id}${s.name}${s.cost}`).join(' ')}`);
+      }
+    }
+  }
+  if (B.over) lines.push(`结果：${B.over.winner === 'player' ? '你赢' : B.over.winner === 'enemy' ? '我赢' : '平局'} —— ${B.over.reason}`);
+  return lines.join('\n');
+}
+
+function recentLog(B, n = 12) {
+  return B.log.slice(-n).join('\n');
+}
+
+/** 给 Web 界面用的纯 JSON 快照（不含函数、不含引擎内部字段） */
+function snapshot(B) {
+  const unit = (u) => ({
+    key: u.key,
+    name: u.name,
+    element: u.element,
+    role: u.role,
+    hp: u.hp,
+    maxHp: u.maxHp,
+    qi: u.qi,
+    spirit: u.spirit,
+    alive: u.alive,
+    frozen: u.frozen,
+    statuses: u.st.map((s) => ({ k: s.k, t: s.t })),
+    buffs: u.buffs.map((b) => ({ k: b.k, t: b.t })),
+    debuffs: u.debuffs.map((d) => ({ k: d.k, t: d.t })),
+    shield: u.shield && u.shield.t > 0 ? u.shield.n : 0,
+    wet: u.wet,
+    vals: u.vals,
+    marks: u.marks,
+    weapon: { name: u.weapon.name, dur: u.weapon.dur, max: u.weapon.max, broken: !!u.weapon.broken },
+  });
+  return {
+    round: B.round,
+    phase: B.phase,
+    first: B.first,
+    x: B.x,
+    env: B.env ? { id: B.env.id, name: B.env.name } : null,
+    reso: B.reso,
+    resoCandidates: B.resoCandidates,
+    over: B.over,
+    log: B.log.slice(-16),
+    sides: {
+      player: {
+        label: '你',
+        units: B.sides.player.units.map((u) => ({
+          ...unit(u),
+          skills: CHARS[u.name].skills.map((s) => ({ name: s.name, cost: s.cost, target: s.target, desc: s.desc || '' })),
+        })),
+      },
+      enemy: { label: '我', units: B.sides.enemy.units.map(unit) },
+    },
+  };
+}
+
+/* ---------------- 自检 ---------------- */
+function selfTest() {
+  const issues = [];
+  const stalls = [];
+  const rnd = makeRng(12345);
+  const teams = roster();
+  for (let game = 0; game < 30; game++) {
+    const shuffled = teams.slice().sort(() => rnd() - 0.5);
+    let B;
+    try {
+      B = createBattle({ playerTeam: shuffled.slice(0, 4), enemyTeam: shuffled.slice(4, 8), seed: 1000 + game });
+    } catch (e) { issues.push(`create: ${e.message}`); continue; }
+    let guard = 0;
+    while (!B.over && guard++ < 200) {
+      const side = B.phase;
+      const units = B.sides[side].units.filter((u) => u.alive && !u.frozen && !u.acted);
+      const actions = [];
+      for (const u of units) {
+        const def = CHARS[u.name];
+        const usable = def.skills.filter((s) => (s.form || '常态') === (u.form || '常态') && s.cost <= u.qi && !(s.cost === 0 && u.zeroUsed) && !(s.cost >= 5 && B.hasDebuff(u, '封印')));
+        if (!usable.length) continue;
+        const s = usable[Math.floor(rnd() * usable.length)];
+        const foes = B.live(B.foesOf(u));
+        const mates = B.live(B.alliesOf(u));
+        const posOf = (arr) => arr.map((x, i) => (x.alive ? i + 1 : 0)).filter(Boolean);
+        const fp = posOf(B.foesOf(u));
+        const mp = posOf(B.alliesOf(u));
+        const pick = (arr) => (arr.length ? arr[Math.floor(rnd() * arr.length)] : 0);
+        const a = { unit: u.name, skill: s.name };
+        if ((s.target === 'one' || s.target === 'two') && !fp.length) continue;
+        if (s.target === 'ally1' && !mp.length) continue;
+        if (s.target === 'one') a.targets = [pick(fp)];
+        if (s.target === 'two') a.targets = [pick(fp), pick(fp)];
+        if (s.target === 'ally1') a.targets = [pick(mp)];
+        actions.push(a);
+      }
+      try { act(B, side, actions); } catch (e) { issues.push(`r${B.round} ${side}: ${e.message}`); break; }
+      for (const sideKey of ['player', 'enemy']) {
+        for (const u of B.sides[sideKey].units) {
+          if (u.hp < 0) issues.push(`${u.name} 血量为负 ${u.hp}`);
+          if (u.qi < 0) issues.push(`${u.name} 气势为负 ${u.qi}`);
+          if (u.alive && u.hp > u.maxHp) issues.push(`${u.name} 血量超上限`);
+          if (!u.alive && u.hp !== 0) issues.push(`${u.name} 阵亡但血量 ${u.hp}`);
+        }
+      }
+    }
+    if (!B.over) { stalls.push(`game ${game}：打到 ${B.round} 回合仍未分胜负`); continue; }
+    else if (!['player', 'enemy', 'draw'].includes(B.over.winner)) issues.push(`game ${game} 结果异常`);
+    if (!Number.isFinite(B.round) || B.round > 100) issues.push(`game ${game} 回合数异常 ${B.round}`);
+  }
+  return { ok: issues.length === 0, issues: issues.slice(0, 12), stalls: stalls.slice(0, 5), games: 30, version: ENGINE_VERSION };
+}
+
+
+// data/fire.js —— 火系 4 名：赤潮 / 灰蛰 / 焚炎 / 炎龙
+// 数值照抄《元素混战规则》十四、全部角色档案（552–593 行）；近似处在行末或上方注明。
+registerChars([
+  {
+    name: '赤潮', element: '火', hp: 150, vital: 15, body: 40, role: '战士',
+    spirit: [2, 5, -3],
+    passive: '敌方施加毒值效率减半；中毒扣血减半；释放任意技能清除自身中毒',
+    skills: [
+      {
+        name: '偃月', cost: 0, target: 'one',
+        desc: '单体3段6伤害，每段独立判定部位；自身气势+1',
+        use(B, me, [t]) {
+          for (let i = 0; i < 3; i++) B.hit(me, t, { dmg: 6 });
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '舞月', cost: 2, target: 'one',
+        desc: '单体20伤害，按部位叠加火值',
+        use(B, me, [t]) {
+          // 近似：规则书未给具体点数，取基础1点火值，交由部位规则修正（要害+50%、护甲-1）
+          B.hit(me, t, { dmg: 20, ele: ['火', 1] });
+        },
+      },
+      {
+        name: '冲月', cost: 4, target: 'one',
+        desc: '单体30伤害，按部位叠加火值',
+        use(B, me, [t]) {
+          // 近似：同上，基础1点火值按部位结算
+          B.hit(me, t, { dmg: 30, ele: ['火', 1] });
+        },
+      },
+      {
+        name: '赶月', cost: 6, target: 'two',
+        desc: '可选3个可重复目标各13伤害，路径敌人10伤害',
+        use(B, me, ts) {
+          // 近似：引擎最多解析 2 个目标（可重复选同一目标），「路径敌人」用相邻溅射 10 表示
+          ts.forEach((t) => B.hit(me, t, { dmg: 13 }));
+          ts.forEach((t) => B.splash(me, t, 10));
+        },
+      },
+      {
+        name: '坠月', cost: 6, target: 'one',
+        desc: '单体34伤害，相邻敌方15溅射伤害',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 34 });
+          B.splash(me, t, 15);
+        },
+      },
+    ],
+  },
+
+  {
+    name: '灰蛰', element: '火', hp: 135, vital: 18, body: 42, role: '自爆刺客',
+    spirit: [2, 5, -2],
+    passive: '敌方施加毒值效率减半；中毒扣血减半；释放任意技能清除自身中毒',
+    skills: [
+      {
+        name: '劈风', cost: 0, target: 'one',
+        desc: '单体4段6伤害，分段判定部位；自身气势+1',
+        use(B, me, [t]) {
+          for (let i = 0; i < 4; i++) B.hit(me, t, { dmg: 6 });
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '闪焰', cost: 6, target: 'two',
+        desc: '可选3个可重复目标，每目标10伤害',
+        use(B, me, ts) {
+          // 近似：引擎最多解析 2 个目标（可重复选同一目标）
+          ts.forEach((t) => B.hit(me, t, { dmg: 10 }));
+        },
+      },
+      {
+        name: '爆躯', cost: 3, target: 'one',
+        desc: '自爆：主目标50伤害，其余敌方16伤害；自身阵亡',
+        use(B, me, [t]) {
+          // 近似：其余敌方用 B.foesOf 遍历、自爆用 B.kill 收尾（两者未列入数据规范 API）
+          B.hit(me, t, { dmg: 50 });
+          B.foesOf(me).forEach((f) => { if (f.alive && f !== t) B.hit(me, f, { dmg: 16 }); });
+          B.selfDamage(me, me.hp);
+          B.kill(me);
+        },
+      },
+      {
+        name: '吹火', cost: 4, target: 'one',
+        desc: '单体4段7伤害，分段判定部位；目标被燃烟标记时改为爆躯（无自爆）效果',
+        use(B, me, [t]) {
+          if (me.ranyan) {
+            // 近似：燃烟标记一次性生效，不严格限定「下回」的回合时效
+            me.ranyan = null;
+            B.hit(me, t, { dmg: 50 });
+            B.foesOf(me).forEach((f) => { if (f.alive && f !== t) B.hit(me, f, { dmg: 16 }); });
+            return;
+          }
+          for (let i = 0; i < 4; i++) B.hit(me, t, { dmg: 7 });
+        },
+      },
+      {
+        name: '燃烟', cost: 6, target: 'one',
+        desc: '标记单个敌人：下回合吹火效果等同于无自爆版爆躯',
+        use(B, me, [t]) {
+          me.ranyan = t;
+          B.mark(t, '燃烟', 1);
+        },
+      },
+    ],
+  },
+
+  {
+    name: '焚炎', element: '火', hp: 135, vital: 18, body: 42, role: '法师',
+    spirit: [1, 4, -4],
+    passive: '自身造成灼烧时额外附加1点火值；灼烧目标死亡时对相邻敌方造成6点伤害',
+    skills: [
+      {
+        name: '火球', cost: 0, target: 'one',
+        desc: '单体11伤害，叠加2点火值；自身气势+1',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 11, ele: ['火', 2] });
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '烈焰冲击', cost: 3, target: 'one',
+        desc: '单体17伤害，叠加3点火值',
+        use(B, me, [t]) { B.hit(me, t, { dmg: 17, ele: ['火', 3] }); },
+      },
+      {
+        name: '焚风', cost: 4, target: 'two',
+        desc: '相邻2名敌方各13伤害，各叠加2点火值',
+        use(B, me, ts) {
+          // 近似：相邻关系由玩家用 two 自选两名相邻目标表示
+          ts.forEach((t) => B.hit(me, t, { dmg: 13, ele: ['火', 2] }));
+        },
+      },
+      {
+        name: '灼热之环', cost: 5, target: 'all',
+        desc: '全体9点AOE，各叠加2点火值；目标已灼烧则伤害+25%',
+        use(B, me, ts) {
+          ts.forEach((t) => B.hit(me, t, { dmg: 9, aoe: true, mult: B.hasStatus(t, '灼烧') ? 1.25 : 1, ele: ['火', 2] }));
+        },
+      },
+      {
+        name: '炼狱爆裂', cost: 8, target: 'one',
+        desc: '单体30伤害，相邻12溅射；主目标附加灼烧2回合',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 30 });
+          B.splash(me, t, 12);
+          B.addStatus(t, '灼烧', 2);
+        },
+      },
+    ],
+  },
+
+  {
+    name: '炎龙', element: '火', hp: 150, vital: 15, body: 55, role: '战士/神备',
+    spirit: [3, 6, -2],
+    // 规则书定位写作「战士/神备」，照抄；引擎未收录该键时按 10 耐久兜底
+    // 近似：引擎没有形态切换状态，神备技能组以 6-10 号并列给出（名字后标注）且均可选；
+    //       被动「龙生九子」的阈值切换、元素值叠加减半、疲劳阈值仅作展示，无对应引擎钩子
+    passive: '龙生九子：血量降至2/3时获得1回合锐锋，此后受到冰/火/毒/雷元素值叠加减半（向上取整）；血量降至1/3时本回合结束后进入神备状态（下回合切换技能组）；神备状态下疲劳阈值由3回合提升至5回合',
+    skills: [
+      {
+        name: '封喉', cost: 0, target: 'one',
+        desc: '单体9伤害，+1火值；下回再次使用则自身+1气势',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 9, ele: ['火', 1] });
+          // 近似：「下回再次使用」按上一大回合也用过封喉判定（0费技能同一回合只能出手一次）
+          if (me.fengRound === B.round - 1) B.gainQi(me, 1);
+          me.fengRound = B.round;
+        },
+      },
+      {
+        name: '焰轮', cost: 3, target: 'one',
+        desc: '单体14伤害；目标灼烧则全体+3火值',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 14 });
+          // 近似：加元素值用 B.stackElement（规范 API 未列）
+          if (B.hasStatus(t, '灼烧')) B.foesOf(me).forEach((f) => { if (f.alive) B.stackElement(me, f, '火', 3); });
+        },
+      },
+      {
+        name: '热血', cost: 4, target: 'one',
+        desc: '单体18伤害，+4火值；自身血量≤2/3则追加2伤害+1火值',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 18, ele: ['火', 4] });
+          if (me.hp * 3 <= me.maxHp * 2) {
+            // 近似：追加段单独写，不判部位以免二次部位倍率
+            B.hit(me, t, { dmg: 2, ele: ['火', 1], part: false });
+          }
+        },
+      },
+      {
+        name: '冲天', cost: 1, target: 'one',
+        desc: '单体10伤害，+2火值；下一大回合自身附加火值+1',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 10, ele: ['火', 2] });
+          // 近似：「下一大回合自身附加火值+1」即刻折算为本次 +1 火值
+          B.stackElement(me, t, '火', 1);
+        },
+      },
+      {
+        name: '燎原', cost: 5, target: 'all',
+        desc: '全体16伤害，+4火值',
+        use(B, me, ts) {
+          ts.forEach((t) => B.hit(me, t, { dmg: 16, aoe: true, ele: ['火', 4] }));
+        },
+      },
+
+      // —— 以下为神备形态技能组 ——
+      {
+        name: '贔屭負礎（神备）', cost: 2, target: 'one',
+        desc: '单体5伤害，+2火值；自身下大回合+1锐锋，本回合受伤-2',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 5, ele: ['火', 2] });
+          // 近似：锐锋按标准2回合即刻挂上（规则书为「下大回合」）
+          B.buff(me, '锐锋', 2);
+          // 近似：本回合受伤-2 用 2 点护盾（1回合）表示，引擎无固定减伤
+          B.shield(me, 2, 1);
+        },
+      },
+      {
+        name: '狻猊騰雲（神备）', cost: 4, target: 'one',
+        desc: '单体22伤害，全体+3火值',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 22 });
+          B.foesOf(me).forEach((f) => { if (f.alive) B.stackElement(me, f, '火', 3); });
+        },
+      },
+      {
+        name: '蒲牢鳴鍾（神备）', cost: 2, target: 'all',
+        desc: '全体8伤害，附加挫志与迟滞',
+        use(B, me, ts) {
+          ts.forEach((t) => {
+            B.hit(me, t, { dmg: 8, aoe: true });
+            B.debuff(t, '挫志', 2);
+            B.debuff(t, '迟滞', 2);
+          });
+        },
+      },
+      {
+        name: '睚眦雪恨（神备）', cost: 4, target: 'all',
+        desc: '全体14伤害；下一大回合自身+1锐锋',
+        use(B, me, ts) {
+          ts.forEach((t) => B.hit(me, t, { dmg: 14, aoe: true }));
+          // 近似：锐锋按标准2回合即刻挂上（规则书为「下一大回合」）
+          B.buff(me, '锐锋', 2);
+        },
+      },
+      {
+        name: '饕餮饗食（神备）', cost: 5, target: 'all',
+        desc: '全体18伤害，+6火值',
+        use(B, me, ts) {
+          ts.forEach((t) => B.hit(me, t, { dmg: 18, aoe: true, ele: ['火', 6] }));
+        },
+      },
+    ],
+  },
+]);
+
+registerChars([
+  {
+    name: '澜汐', element: '水', hp: 135, vital: 15, body: 38, role: '辅助',
+    spirit: [0, 3, -5],
+    passive: '敌方火值叠加减半；灼烧持续1回合且伤害减半；技能命中灼烧目标清空火值与灼烧；自身火伤永久-45%',
+    skills: [
+      {
+        name: '水弹', cost: 0, target: 'one',
+        desc: '单体10伤害+潮湿；自身气势+1',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 10 });
+          B.addWet(t, 1); // 近似：规则书未给潮湿持续回合，取1
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '漫雨', cost: 4, target: 'one',
+        desc: '开启阴雨环境4回合；小范围AOE 7伤害',
+        use(B, me, [t]) {
+          B.buff(me, '阴雨环境', 4); // 近似：无环境 API，记为自身 buff 展示
+          B.hit(me, t, { dmg: 7, aoe: true });
+          B.splash(me, t, 7); // 近似：无范围 API，主体+相邻视作小范围AOE
+        },
+      },
+      {
+        name: '凝水护盾', cost: 3, target: 'ally1',
+        desc: '己方单体减伤50%一回合，清除灼烧、中毒',
+        use(B, me, [t]) {
+          B.reduce(t, 0.5, 1);
+          B.clearStatus(t, '灼烧');
+          B.clearStatus(t, '中毒');
+        },
+      },
+      {
+        name: '激流冲击', cost: 5, target: 'one',
+        desc: '单体24伤害；潮湿目标50%麻痹1回合',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 24 });
+          if (t.wet > 0 && B.rnd() < 0.5) B.addStatus(t, '麻痹', 1);
+        },
+      },
+      {
+        name: '洪涛湮灭', cost: 7, target: 'all',
+        desc: '全体18伤害，清空全场火值与灼烧',
+        use(B, me, ts) {
+          ts.forEach((t) => B.hit(me, t, { dmg: 18, aoe: true }));
+          if (B.clearAllFire) B.clearAllFire();
+          else [...B.foesOf(me), ...B.alliesOf(me)].forEach((u) => { u.vals.火 = 0; B.clearStatus(u, '灼烧'); }); // 近似：无全场清火 API 时遍历双方清火值与灼烧
+        },
+      },
+    ],
+  },
+
+  {
+    name: '汐', element: '水', hp: 135, vital: 12, body: 36, role: '辅助/控制',
+    spirit: [0, 3, -5],
+    passive: '敌方火值叠加减半；灼烧持续1回合且伤害减半；命中灼烧目标清空火值并回5血；自身潮湿时每回合结束回4血；每回合开始若场上有潮湿则获得1层潮汐之力（上限3层，每层水伤+8%）',
+    skills: [
+      {
+        name: '水刃', cost: 0, target: 'one',
+        desc: '单体10伤害+潮湿；潮湿目标+20%；自身气势+1',
+        use(B, me, [t]) {
+          // 近似：被动「每回合开始」无钩子，改为汐每回合首次行动时结算潮汐之力
+          if (me._tidalRound !== B.round) {
+            me._tidalRound = B.round;
+            if ([...B.foesOf(me), ...B.alliesOf(me)].some((u) => u.alive && u.wet > 0)) B.stack(me, '潮汐之力', 1);
+          }
+          B.hit(me, t, { dmg: 10, mult: t.wet > 0 ? 1.2 : 1 });
+          B.addWet(t, 1); // 近似：规则书未给潮湿持续回合，取1
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '潮涌', cost: 3, target: 'one',
+        desc: '单体18伤害+潮湿，叠2冰值；灼烧目标清灼烧回6血',
+        use(B, me, [t]) {
+          if (me._tidalRound !== B.round) {
+            me._tidalRound = B.round;
+            if ([...B.foesOf(me), ...B.alliesOf(me)].some((u) => u.alive && u.wet > 0)) B.stack(me, '潮汐之力', 1);
+          }
+          B.hit(me, t, { dmg: 18, ele: ['冰', 2] });
+          B.addWet(t, 1); // 近似：规则书未给潮湿持续回合，取1
+          if (B.hasStatus(t, '灼烧')) { B.clearStatus(t, '灼烧'); B.heal(me, me, 6); }
+        },
+      },
+      {
+        name: '潮汐护盾', cost: 4, target: 'ally1',
+        desc: '己方单体护盾16（2回合）+清1减益；每层潮汐之力+4护盾',
+        use(B, me, [t]) {
+          if (me._tidalRound !== B.round) {
+            me._tidalRound = B.round;
+            if ([...B.foesOf(me), ...B.alliesOf(me)].some((u) => u.alive && u.wet > 0)) B.stack(me, '潮汐之力', 1);
+          }
+          const n = (me.stacks && me.stacks.潮汐之力) || 0;
+          B.shield(t, 16 + n * 4, 2);
+          if (B.popDebuff) B.popDebuff(t); else B.clearDebuffs(t); // 近似：无「清1个减益」API，退化为清全部
+        },
+      },
+      {
+        name: '潮汐漩涡', cost: 5, target: 'all',
+        desc: '全体10伤害+潮湿2回合+叠2冰值；潮湿目标+30%',
+        use(B, me, ts) {
+          if (me._tidalRound !== B.round) {
+            me._tidalRound = B.round;
+            if ([...B.foesOf(me), ...B.alliesOf(me)].some((u) => u.alive && u.wet > 0)) B.stack(me, '潮汐之力', 1);
+          }
+          ts.forEach((t) => B.hit(me, t, { dmg: 10, mult: t.wet > 0 ? 1.3 : 1, ele: ['冰', 2], aoe: true }));
+          ts.forEach((t) => B.addWet(t, 2));
+        },
+      },
+      {
+        name: '海啸降临', cost: 9, target: 'all',
+        desc: '全体22伤害+潮湿3回合+清全场火；每层潮汐之力+8伤害；己方全队回10血',
+        use(B, me, ts) {
+          if (me._tidalRound !== B.round) {
+            me._tidalRound = B.round;
+            if ([...B.foesOf(me), ...B.alliesOf(me)].some((u) => u.alive && u.wet > 0)) B.stack(me, '潮汐之力', 1);
+          }
+          const n = (me.stacks && me.stacks.潮汐之力) || 0;
+          ts.forEach((t) => B.hit(me, t, { dmg: 22 + n * 8, aoe: true }));
+          ts.forEach((t) => B.addWet(t, 3));
+          if (B.sides) [...B.sides.player.units, ...B.sides.enemy.units].forEach((u) => { u.vals.火 = 0; }); // 近似：无「清全场火值」API，遍历双方清火值（保留灼烧）
+          B.alliesOf(me).forEach((u) => { if (u.alive) B.heal(me, u, 10); }); // 近似：技能目标为敌方全体，己方回血用 alliesOf 遍历
+        },
+      },
+    ],
+  },
+
+  {
+    name: '英波', element: '水', hp: 135, vital: 15, body: 65, role: '辅助/治疗',
+    spirit: [0, 3, -5],
+    passive: '己方角色受到治疗时额外回复3点血量；自身每大回合结束回复4点血量',
+    skills: [
+      {
+        name: '鳞枪', cost: 0, target: 'one',
+        desc: '单体3段3伤害（共9点），每段独立判定部位；自身恢复2气势',
+        use(B, me, [t]) { for (let i = 0; i < 3; i++) B.hit(me, t, { dmg: 3 }); B.gainQi(me, 2); },
+      },
+      {
+        name: '清泉', cost: 4, target: 'one',
+        desc: '接下来2大回合每回合扣7血；自身对该目标攻击要害+8%、护甲-8%（2回合）',
+        use(B, me, [t]) {
+          for (let i = 0; i < 2; i++) B.hit(me, t, { dmg: 7, part: false }); // 近似：无延迟结算 API，两跳7点当回合各结算一次
+          B.buff(me, '清泉', 2); // 近似：无部位命中率 API，要害+8%/护甲-8% 只记录展示
+        },
+      },
+      {
+        name: '涌卷', cost: 5, target: 'one',
+        desc: '单体8伤害，下回合追加9伤害；若下回合自身攻击该目标则回12血',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 8 });
+          B.hit(me, t, { dmg: 9, part: false }); // 近似：无延迟结算 API，追加9点当回合结算
+          // 近似：回血条件（下回合自身对该目标攻击）无法预测，未结算
+        },
+      },
+      {
+        name: '祝福', cost: 8, target: 'ally1',
+        desc: '队友受伤-20%至施放者下个行动回合开始；目标死亡则移除祝福并回至50%血；每人每局限1次',
+        use(B, me, [t]) {
+          if (t.marks && t.marks.祝福) { B.log.push(`${t.name} 本局已被祝福过`); return; }
+          B.buff(t, '祝福', 1);
+          B.reduce(t, 0.2, 1);
+          B.mark(t, '祝福', 1);
+          // 近似：无死亡触发 API，目标死亡恢复至50%最大血量未实现
+        },
+      },
+      {
+        name: '澜漩', cost: 6, target: 'one',
+        desc: '2大回合指定目标每回合扣7血；若有角色攻击该目标则攻击者回12血',
+        use(B, me, [t]) {
+          for (let i = 0; i < 2; i++) B.hit(me, t, { dmg: 7, part: false }); // 近似：无延迟结算 API，两跳7点当回合各结算一次
+          // 近似：攻击者回12血依赖命中钩子，未实现
+        },
+      },
+    ],
+  },
+]);
+
+registerChars([
+  {
+    name: '乌川', element: '风', hp: 135, vital: 10, body: 30, role: '战士',
+    spirit: [1, 4, -4],
+    passive: '风力环境每回合额外+2气势；不会被强制位移',
+    skills: [
+      {
+        name: '挽澜', cost: 2, target: 'self',
+        desc: '本回合受伤÷2；每被攻击额外+1气势（近似：引擎没有「被攻击」钩子，只做到减伤）',
+        use(B, me) {
+          B.reduce(me, 0.5, 1);
+          B.log.push('乌川受伤减半（被攻击额外+1气势：引擎无结算点，未实现）');
+        }, // 近似：被动式「每被攻击+1气势」无法挂到受伤结算上
+      },
+      {
+        name: '朔风', cost: 4, target: 'all',
+        desc: '三名相邻敌人各12伤害（近似：引擎无站位，取前3名存活敌人视为相邻三人）',
+        use(B, me, ts) {
+          ts.slice(0, 3).forEach((t) => B.hit(me, t, { dmg: 12, aoe: true }));
+        }, // 近似：没有相邻判定，用敌方前3位代替
+      },
+      {
+        name: '锋旋', cost: 1, target: 'self',
+        desc: '下回合【朔风】无消耗（近似：引擎没有跨回合免气结算，只打标记并记录）',
+        use(B, me) {
+          me.freeShuofeng = true;
+          B.log.push('乌川下回合的【朔风】应无消耗（引擎暂不结算免气）');
+        }, // 近似：免气标记引擎不读取
+      },
+      {
+        name: '破土', cost: 0, target: 'one',
+        desc: '单体18伤害；自身气势+1',
+        use(B, me, ts) {
+          B.hit(me, ts[0], { dmg: 18 });
+        }, // 气势+1 由引擎对攻击技能的通用气韵 +1 结算，不重复叠加
+      },
+      {
+        name: '飒沓', cost: 6, target: 'one',
+        desc: '单体3段8伤害；释放后转为风形态（近似：引擎无形态系统，风形态技能一并列出、可直接使用）',
+        use(B, me, ts) {
+          for (let i = 0; i < 3; i++) B.hit(me, ts[0], { dmg: 8 });
+          me.form = '风';
+          B.log.push('乌川转为风形态');
+        }, // 近似：形态只打标记，不做技能池切换
+      },
+      {
+        name: '扫尘（风形态）', cost: 4, target: 'one',
+        desc: '单体3段7伤害',
+        use(B, me, ts) {
+          for (let i = 0; i < 3; i++) B.hit(me, ts[0], { dmg: 7 });
+        },
+      },
+      {
+        name: '狼星（风形态）', cost: 6, target: 'all',
+        desc: '全体12伤害，统一一次部位判定（近似：引擎逐目标独立判定部位）',
+        use(B, me, ts) {
+          ts.forEach((t) => B.hit(me, t, { dmg: 12, aoe: true }));
+        }, // 近似：无法把一次部位结果套用到全体
+      },
+      {
+        name: '飙风（风形态）', cost: 5, target: 'all',
+        desc: '3次单发9伤害，可选3个可重复目标（近似：引擎不支持自选重复目标，取前3名敌人，不足时重复首位）',
+        use(B, me, ts) {
+          const list = ts.slice(0, 3);
+          while (list.length < 3) list.push(ts[0]);
+          list.forEach((t) => B.hit(me, t, { dmg: 9 }));
+        }, // 近似：目标选择收窄为按顺序取前3位
+      },
+      {
+        name: '乘风（风形态）', cost: 3, target: 'self',
+        desc: '无敌1回合',
+        use(B, me) {
+          B.invuln(me, 1);
+        },
+      },
+      {
+        name: '断云（风形态）', cost: 8, target: 'one',
+        desc: '单体30伤害，相邻15溅射',
+        use(B, me, ts) {
+          B.hit(me, ts[0], { dmg: 30 });
+          B.splash(me, ts[0], 15);
+        },
+      },
+    ],
+  },
+  {
+    name: '朔飔', element: '风', hp: 120, vital: 15, body: 45, role: '法师',
+    spirit: [1, 4, -4],
+    passive: '风力环境每回合+2气势；不可位移；开启风力环境时己方全体锐锋1回合；血量首次低于30%时自动获得1回合无敌（每局限1次）',
+    skills: [
+      {
+        name: '旋风袭', cost: 0, target: 'one',
+        desc: '单体11伤害，开启微风环境（引擎无环境系统）；目标的灼烧/中毒向相邻扩散',
+        use(B, me, ts) {
+          const t = ts[0];
+          B.hit(me, t, { dmg: 11 });
+          B.log.push('开启微风环境（引擎无环境系统，仅记录）');
+          const foes = B.foesOf(t);
+          const i = foes.indexOf(t);
+          for (const f of [foes[i - 1], foes[i + 1]]) {
+            if (!f || !f.alive) continue;
+            if (B.hasStatus(t, '灼烧')) B.addStatus(f, '灼烧', 2);
+            if (B.hasStatus(t, '中毒')) B.addStatus(f, '中毒', 3);
+          }
+        }, // 近似：扩散按敌方列表的前后一位当作相邻
+      },
+      {
+        name: '卷风扰阵', cost: 3, target: 'one',
+        desc: '开启强风3回合（引擎无环境系统）；单体16伤害，清2毒值',
+        use(B, me, ts) {
+          B.log.push('开启强风环境3回合（引擎无环境系统，仅记录）');
+          const t = ts[0];
+          B.hit(me, t, { dmg: 16 });
+          t.vals.毒 = Math.max(0, t.vals.毒 - 2);
+          B.log.push(`${t.name} 毒值 -2`);
+        },
+      },
+      {
+        name: '气流分流', cost: 4, target: 'ally1',
+        desc: '指定己方本回合可跨位选敌；清除高温/干旱环境（近似：引擎无站位限制、无环境系统，仅记录）',
+        use(B, me, ts) {
+          const t = ts[0];
+          B.log.push(`${t.name} 本回合可跨位选敌（引擎无站位限制，天然满足）`);
+          B.log.push('清除高温/干旱环境（引擎无环境系统，仅记录）');
+        }, // 近似：两项效果在引擎里都没有对应状态
+      },
+      {
+        name: '飓风吹散', cost: 6, target: 'all',
+        desc: '开启暴风4回合（引擎无环境系统）；全体13伤害，清空敌方毒值',
+        use(B, me, ts) {
+          B.log.push('开启暴风环境4回合（引擎无环境系统，仅记录）');
+          ts.forEach((t) => {
+            B.hit(me, t, { dmg: 13, aoe: true });
+            t.vals.毒 = 0;
+          });
+        },
+      },
+      {
+        name: '风啸天陨', cost: 8, target: 'one',
+        desc: '强制锁定暴风（引擎无环境系统）；单体32伤害，目标下回合无基础气势（近似：只打标记）；+1愈战',
+        use(B, me, ts) {
+          B.log.push('强制锁定暴风（引擎无环境系统，仅记录）');
+          const t = ts[0];
+          B.hit(me, t, { dmg: 32 });
+          t.noBaseQi = 1;
+          B.log.push(`${t.name} 下回合无基础气势（引擎暂不结算）`);
+          B.stack(me, '愈战', 1);
+        }, // 近似：引擎没有「下回合不发放基础气势」的结算点
+      },
+    ],
+  },
+  {
+    name: '凌风', element: '风', hp: 120, vital: 20, body: 40, role: '刺客',
+    spirit: [2, 5, -3],
+    passive: '风力环境每回合+2气势；不可位移；每驱散1个敌方增益获得1层锐锋（1回合）',
+    skills: [
+      {
+        name: '风刃', cost: 0, target: 'one',
+        desc: '单体10伤害；本回合未受伤则+30%；自身气势+1',
+        use(B, me, ts) {
+          B.hit(me, ts[0], { dmg: 10, mult: me.hurtThisRound ? 1 : 1.3 });
+        }, // 气势+1 由引擎对攻击技能的通用气韵 +1 结算，不重复叠加
+      },
+      {
+        name: '穿风刺', cost: 3, target: 'one',
+        desc: '单体16伤害；可跨越1格站位（近似：引擎无站位限制，天然满足）',
+        use(B, me, ts) {
+          B.hit(me, ts[0], { dmg: 16 });
+        }, // 近似：跨越站位在无站位的引擎里无需结算
+      },
+      {
+        name: '风墙', cost: 4, target: 'self',
+        desc: '本回合无敌，元素叠加减半（近似：引擎无「元素叠加减半」钩子，只记录）',
+        use(B, me) {
+          B.invuln(me, 1);
+          me.eleStackHalf = 1;
+          B.log.push('凌风本回合元素叠加减半（引擎暂不结算）');
+        }, // 近似：元素叠加没有减半接口
+      },
+      {
+        name: '裂风斩', cost: 5, target: 'two',
+        desc: '相邻2名各14伤害；目标为火/毒/土系+30%（近似：引擎无站位，相邻用选2名目标代替）',
+        use(B, me, ts) {
+          ts.forEach((t) => B.hit(me, t, { dmg: 14, mult: ['火', '毒', '土'].includes(t.element) ? 1.3 : 1 }));
+        },
+      },
+      {
+        name: '暴风眼', cost: 8, target: 'all',
+        desc: '全体16伤害，统一一次部位判定（近似：引擎逐目标判定部位）；开启暴风3回合（引擎无环境系统）',
+        use(B, me, ts) {
+          B.log.push('开启暴风环境3回合（引擎无环境系统，仅记录）');
+          ts.forEach((t) => B.hit(me, t, { dmg: 16, aoe: true }));
+        }, // 近似：无法把一次部位结果套用到全体
+      },
+    ],
+  },
+]);
+
+// data/ice.js
+registerChars([
+  {
+    name: '皓霜', element: '冰', hp: 135, vital: 15, body: 42, role: '控制辅助',
+    spirit: [-1, 2, -6],
+    passive: '可终止雷云峡谷/狂风隘口（耗气≥3）；受雷击雷值获取减半',
+    // 近似：终止环境/地形机制未实现；受雷击雷值减半由引擎冰系抗性表处理
+    skills: [
+      { name: '薄触', cost: 0, target: 'one', desc: '单体9伤，叠冰值；自身气势+1',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 9, ele: ['冰', 1] }); B.gainQi(me, 1); } },
+        // 近似：规则书未给冰值点数，取 1 点/段
+      { name: '拂袖', cost: 4, target: 'all', desc: '全体5AOE，统一一次部位判定叠冰值',
+        use(B, me, ts) {
+          const p = ts[0].parts || { vital: 20, body: 40 };
+          const r = B.rnd() * 100;
+          const vital = r < p.vital;
+          const armor = r >= p.vital + p.body;
+          const mult = vital ? 1.6 : armor ? 0.7 : 1;
+          const iceVal = vital ? 2 : armor ? 0 : 1;
+          ts.forEach((t) => {
+            const o = { dmg: 5, mult, part: false, aoe: true };
+            if (iceVal > 0) o.ele = ['冰', iceVal];
+            B.hit(me, t, o);
+          });
+        } },
+        // 近似：引擎无"全体统一部位判定"接口，这里手动掷一次骰并按该部位倍率/冰值结算
+      { name: '甩袖', cost: 3, target: 'one', desc: '单体3段5伤，每段独立判定部位',
+        use(B, me, ts) { for (let i = 0; i < 3; i++) B.hit(me, ts[0], { dmg: 5 }); } },
+        // 规则书此条未写叠冰值，故不加
+      { name: '掀寒', cost: 5, target: 'one', desc: '单体14伤，相邻5溅射',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 14 }); B.splash(me, ts[0], 5); } },
+      { name: '白练', cost: 8, target: 'all', desc: '全体+3冰值，开启雪域形态',
+        use(B, me, ts) { ts.forEach((t) => B.stackElement(me, t, '冰', 3)); me.form = '雪域'; } },
+        // 近似：全体按敌方全体处理；引擎无形态字段，用 me.form 标记形态
+      { name: '掷袖（雪域）', cost: 2, target: 'one', desc: '单体12伤，叠冰值',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 12, ele: ['冰', 1] }); } },
+        // 近似：冰值取 1 点；引擎无形态栏，形态技能并列可选
+      { name: '抛袖（雪域）', cost: 5, target: 'one', desc: '单体18伤；未冰冻叠冰值，已冰冻+50%并解冻',
+        use(B, me, ts) {
+          const t = ts[0];
+          if (B.hasStatus(t, '冰冻')) {
+            B.hit(me, t, { dmg: 18, mult: 1.5 });
+            B.clearStatus(t, '冰冻');
+          } else {
+            B.hit(me, t, { dmg: 18, ele: ['冰', 1] });
+          }
+        } },
+        // 近似：冰值取 1 点；引擎无形态栏，形态技能并列可选
+    ],
+  },
+
+  {
+    name: '玄渊', element: '冰', hp: 145, vital: 15, body: 37, role: '战士',
+    spirit: [1, 4, -4],
+    passive: '可终止雷云峡谷/狂风隘口（耗气≥3）；受雷击雷值获取减半',
+    // 近似：终止环境/地形机制未实现；受雷击雷值减半由引擎冰系抗性表处理
+    skills: [
+      { name: '春荣', cost: 0, target: 'one', desc: '单体3段8伤，叠冰值；自身气势+1',
+        use(B, me, ts) { for (let i = 0; i < 3; i++) B.hit(me, ts[0], { dmg: 8, ele: ['冰', 1] }); B.gainQi(me, 1); } },
+        // 近似：冰值取 1 点/段（规范要求多段每段各加）
+      { name: '旋刃', cost: 4, target: 'two', desc: '一号两段7伤，二号9伤',
+        use(B, me, ts) {
+          B.hit(me, ts[0], { dmg: 7 });
+          B.hit(me, ts[0], { dmg: 7 });
+          if (ts[1] && ts[1] !== ts[0]) B.hit(me, ts[1], { dmg: 9 });
+        } },
+        // 规则书此条未写叠冰值，故不加
+      { name: '冬枯', cost: 3, target: 'one', desc: '单体20伤，叠冰值',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 20, ele: ['冰', 1] }); } },
+        // 近似：冰值取 1 点
+      { name: '翻芒', cost: 6, target: 'one', desc: '本回合无敌，单体15伤',
+        use(B, me, ts) { B.invuln(me, 1); B.hit(me, ts[0], { dmg: 15 }); } },
+        // 规则书此条未写叠冰值，故不加
+      { name: '云来', cost: 7, target: 'one', desc: '单体10伤，+5冰值，开启云来形态',
+        use(B, me, ts) {
+          B.hit(me, ts[0], { dmg: 10 });
+          B.stackElement(me, ts[0], '冰', 5);
+          me.form = '云来';
+        } },
+        // 近似：引擎无形态字段，用 me.form 标记形态
+      { name: '滞寒（云来）', cost: 3, target: 'one', desc: '单体4段7伤，叠冰值',
+        use(B, me, ts) { for (let i = 0; i < 4; i++) B.hit(me, ts[0], { dmg: 7, ele: ['冰', 1] }); } },
+        // 近似：冰值取 1 点/段；引擎无形态栏，形态技能并列可选
+      { name: '斩刃（云来）', cost: 5, target: 'two', desc: '一号两段8伤，二号10伤',
+        use(B, me, ts) {
+          B.hit(me, ts[0], { dmg: 8 });
+          B.hit(me, ts[0], { dmg: 8 });
+          if (ts[1] && ts[1] !== ts[0]) B.hit(me, ts[1], { dmg: 10 });
+        } },
+        // 近似：引擎无形态栏，形态技能并列可选
+      { name: '墨云（云来）', cost: 3, target: 'self', desc: '本回合无敌',
+        use(B, me) { B.invuln(me, 1); } },
+        // 近似：引擎无形态栏，形态技能并列可选
+      { name: '断芒（云来）', cost: 7, target: 'two', desc: '一号两段9伤，二号12伤；上回受伤害则翻倍',
+        use(B, me, ts) {
+          const mult = me.hurtThisRound ? 2 : 1;
+          B.hit(me, ts[0], { dmg: 9, mult });
+          B.hit(me, ts[0], { dmg: 9, mult });
+          if (ts[1] && ts[1] !== ts[0]) B.hit(me, ts[1], { dmg: 12, mult });
+        } },
+        // 近似："上回受伤害翻倍"语义不明，按本回合已受伤则翻倍（引擎仅提供 hurtThisRound）
+      { name: '雾往（云来）', cost: 8, target: 'one', desc: '单体35伤，+4冰值，退出云来形态',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 35 }); B.stackElement(me, ts[0], '冰', 4); me.form = '常态'; } },
+        // 近似：引擎无形态栏，形态技能并列可选
+    ],
+  },
+
+  {
+    name: '寒魄', element: '冰', hp: 155, vital: 10, body: 30, role: '坦克/控制',
+    spirit: [-1, 2, -6],
+    passive: '可终止雷云峡谷/狂风隘口（耗气≥3）；受雷击雷值获取减半；被冰冻目标攻击自身时伤害-30%',
+    // 近似：终止环境/地形机制未实现；受雷击雷值减半由引擎冰系抗性表处理
+    skills: [
+      { name: '冰锤', cost: 0, target: 'one', desc: '单体10伤，叠2冰值；自身气势+1',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 10, ele: ['冰', 2] }); B.gainQi(me, 1); } },
+      { name: '寒霜护盾', cost: 3, target: 'self', desc: '自身护盾16点（2回合），攻击者叠2冰值',
+        use(B, me) { B.shield(me, 16, 2); } },
+        // 近似：引擎无受击反击接口，攻击者叠2冰值未实现
+      { name: '冰裂斩', cost: 4, target: 'one', desc: '单体20伤，叠3冰值',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 20, ele: ['冰', 3] }); } },
+      { name: '极寒领域', cost: 5, target: 'all', desc: '全体8伤，各叠2冰值；冰冻目标额外8伤',
+        use(B, me, ts) {
+          ts.forEach((t) => {
+            const frozen = B.hasStatus(t, '冰冻');
+            B.hit(me, t, { dmg: 8, ele: ['冰', 2], aoe: true });
+            if (frozen) B.hit(me, t, { dmg: 8, part: false });
+          });
+        } },
+      { name: '永冻之握', cost: 8, target: 'one', desc: '单体28伤；目标冰值≥6则冰冻1回合；自身回12血',
+        use(B, me, ts) {
+          const t = ts[0];
+          B.hit(me, t, { dmg: 28 });
+          if (t.vals.冰 >= 6) B.addStatus(t, '冰冻', 1);
+          B.heal(me, me, 12);
+        } },
+    ],
+  },
+]);
+
+registerChars([
+  {
+    name: '金岚', element: '雷', hp: 130, vital: 18, body: 44, role: '法师',
+    spirit: [1, 4, -4],
+    passive: '克制水、风、暗；攻击潮湿目标伤害×1.3（导电反应触发后清潮湿）',
+    skills: [
+      { name: '浮光', cost: 5, target: 'one', desc: '单体两段6伤，每段判定部位叠雷值；目标潮湿则额外迟滞1回合',
+        use(B, me, ts) { const wet = ts[0].wet > 0; for (let i = 0; i < 2; i++) B.hit(me, ts[0], { dmg: 6, ele: ['雷', 2] }); if (wet) B.debuff(ts[0], '迟滞', 1); } }, // 近似：规则书只说「叠加雷值」未给数值，取每段2点
+      { name: '无恙', cost: 5, target: 'one', desc: '单体15伤并叠雷值；若目标上回合攻击过自己则无消耗',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 15, ele: ['雷', 2] }); if (me.dmgTaken > 0) B.gainQi(me, 5); me.wuyangRound = B.round; } }, // 近似：引擎不记录「谁上回合打过我」，用本回合是否受伤代判并返还等额气势；雷值未给数值取2点
+      { name: '无情', cost: 5, target: 'one', desc: '单体16伤并叠雷值；上回合使用过无恙则伤害翻倍',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 16, mult: me.wuyangRound === B.round - 1 ? 2 : 1, ele: ['雷', 2] }); } }, // 近似：雷值未给数值取2点
+      { name: '掠影', cost: 5, target: 'two', desc: '连续站位两名敌人各12伤，分别判定部位叠雷值',
+        use(B, me, ts) { ts.forEach((t) => B.hit(me, t, { dmg: 12, ele: ['雷', 2] })); } }, // 近似：「连续站位」由玩家选目标体现，引擎不校验相邻；雷值未给数值取2点
+      { name: '阳春', cost: 12, target: 'two', desc: '可选1~2名敌人（可重复）依次受20/30/40伤害，每一击判定部位叠雷值',
+        use(B, me, ts) { const b = ts[1] || ts[0]; [20, 30, 40].forEach((d, i) => B.hit(me, i === 1 ? b : ts[0], { dmg: d, ele: ['雷', 2] })); } }, // 近似：引擎目标最多2个，无法表达「3个可重复目标」，第三击回到首个目标；雷值未给数值取每击2点
+    ],
+  },
+
+  {
+    name: '黯雷', element: '雷', hp: 120, vital: 15, body: 41, role: '刺客',
+    spirit: [2, 5, -3],
+    passive: '同金岚：克制水、风、暗；攻击潮湿目标伤害×1.3（导电反应触发后清潮湿）',
+    skills: [
+      { name: '奔霄', cost: 0, target: 'one', desc: '单体16伤；本回合未受伤则获锐锋1回合（每局限1次）；气势+1',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 16 }); if (!me.hurtThisRound && !me.benxiaoUsed) { B.buff(me, '锐锋', 1); me.benxiaoUsed = true; } B.gainQi(me, 1); } },
+      { name: '旋光', cost: 4, target: 'all', desc: '相邻三名敌人各9伤',
+        use(B, me, ts) { ts.forEach((t) => B.hit(me, t, { dmg: 9 })); } }, // 近似：无「相邻三名」目标选择，用敌方全体代判
+      { name: '连电', cost: 3, target: 'one', desc: '单体3段6伤，分段判定部位叠雷值',
+        use(B, me, ts) { for (let i = 0; i < 3; i++) B.hit(me, ts[0], { dmg: 6, ele: ['雷', 2] }); } }, // 近似：雷值未给数值，取每段2点
+      { name: '励雷', cost: 5, target: 'two', desc: '可选1或2名不重复敌人，各14伤',
+        use(B, me, ts) { ts.slice(0, 2).forEach((t) => B.hit(me, t, { dmg: 14 })); } },
+      { name: '激荡', cost: 9, target: 'self', desc: '开启雷阵3回合，所有技能命中额外+2雷值',
+        use(B, me) { B.buff(me, '雷阵', 3); me.form = '雷阵'; } }, // 近似：引擎没有「技能命中额外叠元素值」的全局钩子，只记录雷阵状态
+      { name: '雷阵形态·藏蛰', cost: 4, target: 'one', desc: '指定敌方2回合每回合扣5血、+2雷值；DOT不判定部位',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 5, part: false, ele: ['雷', 2] }); B.debuff(ts[0], '藏蛰', 2); } }, // 近似：引擎无跨回合DOT接口，只结算当回合一跳并记录剩余回合
+    ],
+  },
+
+  {
+    name: '霆光', element: '雷', hp: 120, vital: 22, body: 40, role: '射手',
+    spirit: [1, 4, -4],
+    passive: '攻击潮湿目标伤害×1.3；技能命中时20%概率对相邻敌方造成6点连锁雷电伤害；自身血量低于40%时，每大回合开始自动获得护盾吸收10点（持续至回合结束）',
+    skills: [
+      { name: '电击', cost: 0, target: 'one', desc: '单体10伤，叠2雷值；自身气势+1',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 10, ele: ['雷', 2] }); B.gainQi(me, 1); } },
+      { name: '雷矢', cost: 3, target: 'one', desc: '单体18伤，叠3雷值',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 18, ele: ['雷', 3] }); } },
+      { name: '连锁闪电', cost: 4, target: 'one', desc: '主目标14伤＋相邻1名10伤，各叠2雷值',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 14, ele: ['雷', 2] }); B.splash(me, ts[0], 10, ['雷', 2]); } }, // 近似：B.splash 会同时打到左右两名相邻，规则书只写相邻1名
+      { name: '雷暴', cost: 5, target: 'all', desc: '全体10点AOE，各叠2雷值；潮湿目标额外6伤',
+        use(B, me, ts) { ts.forEach((t) => { const wet = t.wet > 0; B.hit(me, t, { dmg: 10, ele: ['雷', 2] }); if (wet) B.hit(me, t, { dmg: 6, part: false }); }); } },
+      { name: '万雷天牢', cost: 8, target: 'one', desc: '单体30伤，相邻14溅射；潮湿目标×1.6',
+        use(B, me, ts) { const wet = ts[0].wet > 0; B.hit(me, ts[0], { dmg: 30, mult: wet ? 1.6 : 1 }); B.splash(me, ts[0], 14); } },
+    ],
+  },
+
+  {
+    name: '闪霆', element: '雷', hp: 120, vital: 13, body: 27, role: '射手',
+    spirit: [2, 5, -3],
+    passive: '攻击潮湿目标伤害×1.3；每命中一个目标自身气势+1（每回合限3次）；自身受到伤害时，对攻击者造成3点雷电反伤',
+    skills: [
+      { name: '掌雷', cost: 0, target: 'one', desc: '单体12伤，+1雷值；自身气势+1',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 12, ele: ['雷', 1] }); B.gainQi(me, 1); } },
+      { name: '唤雷', cost: 2, target: 'one', desc: '单体15伤+2雷值；相邻敌方各7伤+1雷值',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 15, ele: ['雷', 2] }); B.splash(me, ts[0], 7, ['雷', 1]); } },
+      { name: '赋雷', cost: 4, target: 'self', desc: '下2大回合自身附加雷值+1，并获得锐锋2回合',
+        use(B, me) { B.buff(me, '锐锋', 2); B.buff(me, '附雷', 2); } }, // 近似：引擎没有「自身附加雷值+1」的接口，只记录该状态；锐锋同名由引擎刷新时长
+      { name: '霹雳', cost: 5, target: 'one', desc: '单体20伤+2雷值；相邻敌方各8伤+1雷值',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 20, ele: ['雷', 2] }); B.splash(me, ts[0], 8, ['雷', 1]); } },
+      { name: '天谴', cost: 8, target: 'all', desc: '全体16伤，+5雷值',
+        use(B, me, ts) { ts.forEach((t) => B.hit(me, t, { dmg: 16, ele: ['雷', 5] })); } },
+    ],
+  },
+]);
+
+// 毒系 3 名：藕苞 / 蛊蔓 / 蚀骸
+registerChars([
+  {
+    name: '藕苞', element: '毒', hp: 130, vital: 15, body: 44, role: '召唤辅助',
+    spirit: [0, 3, -5],
+    passive: '被火系克制；潮湿环境每回合毒值+1（不作用于已中毒目标）；干旱环境毒值获取减半；被火系攻击损失一半现有毒值',
+    skills: [
+      { name: '毁人', cost: 0, target: 'one',
+        desc: '单体4段3伤害，每段叠1毒值、五成概率附加1虫卵；气势+1；目标已有虫卵则破甲1回合（每局限2次）',
+        use(B, me, ts) {
+          const t = ts[0];
+          const hadEgg = !!t.marks && (t.marks['虫卵'] || 0) > 0;
+          for (let i = 0; i < 4; i++) {
+            B.hit(me, t, { dmg: 3, ele: ['毒', 1] });
+            if (B.rnd() < 0.5) B.mark(t, '虫卵', 1);
+          }
+          B.gainQi(me, 1);
+          if (hadEgg && (me.huiTimes || 0) < 2) {
+            B.debuff(t, '破甲', 1);
+            me.huiTimes = (me.huiTimes || 0) + 1;
+          }
+        } },
+
+      { name: '恶秽', cost: 5, target: 'two',
+        desc: '两名可重复敌人各12伤害，各附加1虫卵与毒值',
+        use(B, me, ts) {
+          ts.forEach((t) => {
+            B.hit(me, t, { dmg: 12, ele: ['毒', 1] });
+            B.mark(t, '虫卵', 1);
+          });
+        } },
+
+      { name: '虐己', cost: 4, target: 'all',
+        desc: '自损20血量；对带虫卵敌人造成8×虫卵数伤害（无部位判定）；全体敌方+3毒值',
+        use(B, me, ts) {
+          B.selfDamage(me, 20);
+          ts.forEach((t) => {
+            const n = (t.marks && t.marks['虫卵']) || 0;
+            if (n > 0) B.hit(me, t, { dmg: 8 * n, part: false });
+            B.stackElement(me, t, '毒', 3);
+          });
+        } },
+
+      { name: '功成', cost: 6, target: 'one',
+        desc: '引爆目标全部虫卵，单虫卵8伤害+毒值；自身回4血量',
+        use(B, me, ts) {
+          const t = ts[0];
+          let n = 0;
+          while (B.useMark(t, '虫卵', 1)) n += 1;
+          if (n > 0) B.hit(me, t, { dmg: 8 * n, ele: ['毒', n] });
+          B.heal(me, me, 4);
+        } },
+
+      { name: '缫丝', cost: 5, target: 'self',
+        desc: '后续2大回合，每回合开局随机给一名敌方挂1虫卵',
+        use(B, me) {
+          B.mark(me, '缫丝', 2); // 近似：引擎没有回合开局钩子，改为记 2 层「缫丝」，由引擎在开局抽一名敌方挂卵
+        } },
+    ],
+  },
+
+  {
+    name: '蛊蔓', element: '毒', hp: 120, vital: 16, body: 44, role: '控制法师',
+    spirit: [0, 3, -5],
+    passive: '敌方携带中毒/虫卵时，每回合向相邻敌方扩散1毒值；每使1人中毒永久增伤2%（上限10%）；不会被单次火系攻击清空全部毒值，仅减半扣除',
+    skills: [
+      { name: '牵藤', cost: 0, target: 'one',
+        desc: '单体4段4伤害，每段叠1毒值、五成概率附加1虫卵；气势+1；目标中毒则向相邻敌方扩散1毒值并割裂2回合',
+        use(B, me, ts) {
+          const t = ts[0];
+          for (let i = 0; i < 4; i++) {
+            B.hit(me, t, { dmg: 4, ele: ['毒', 1] });
+            if (B.rnd() < 0.5) B.mark(t, '虫卵', 1);
+          }
+          B.gainQi(me, 1);
+          if (B.hasStatus(t, '中毒')) {
+            const foes = B.foesOf(t);
+            const idx = foes.indexOf(t);
+            [foes[idx - 1], foes[idx + 1]].forEach((u) => {
+              if (u && u.alive) B.stackElement(me, u, '毒', 1);
+            });
+            B.debuff(t, '割裂', 2);
+          }
+        } },
+
+      { name: '铺瘴', cost: 5, target: 'two',
+        desc: '选取2名敌方各13伤害，附加5毒值，施加迟滞2回合',
+        use(B, me, ts) {
+          ts.forEach((t) => {
+            B.hit(me, t, { dmg: 13, ele: ['毒', 5] });
+            B.debuff(t, '迟滞', 2);
+          });
+        } },
+
+      { name: '缠蛊', cost: 4, target: 'one',
+        desc: '锁定目标虫卵与毒值3回合无法驱散，目标治疗效果降低40%',
+        use(B, me, ts) {
+          const t = ts[0];
+          B.mark(t, '缠蛊', 3); // 近似：无「不可驱散」API，用 3 层「缠蛊」标记记账，引擎读到即跳过清毒/清卵
+          B.debuff(t, '封印', 3); // 近似：治疗-40% 用【封印】3 回合近似
+        } },
+
+      { name: '溃蔓', cost: 6, target: 'all',
+        desc: '引爆全场所有敌方虫卵，单枚虫卵7毒伤；全体敌方+4毒值',
+        use(B, me, ts) {
+          ts.forEach((t) => {
+            let n = 0;
+            while (B.useMark(t, '虫卵', 1)) n += 1;
+            if (n > 0) B.hit(me, t, { dmg: 7 * n });
+            B.stackElement(me, t, '毒', 4);
+          });
+        } },
+
+      { name: '万蛊归丛', cost: 8, target: 'self',
+        desc: '开启毒瘴环境4回合，敌方每回合+2毒值；自身获得3层愈战',
+        use(B, me) {
+          B.mark(me, '毒瘴', 4); // 近似：无环境/回合开始钩子，记 4 层「毒瘴」待引擎逐回合结算
+          B.stack(me, '愈战', 3);
+          B.live(B.foesOf(me)).forEach((t) => B.stackElement(me, t, '毒', 2)); // 近似：先把首回合的+2毒值结算掉
+        } },
+    ],
+  },
+
+  {
+    name: '蚀骸', element: '毒', hp: 150, vital: 19, body: 43, role: '自残爆发',
+    spirit: [2, 5, -3],
+    passive: '每损失2HP永久提升0.2%毒伤（上限25%）；血量低于35%时毒值获取翻倍；阵亡时给击杀者附加10毒值+3回合中毒',
+    skills: [
+      { name: '噬皮', cost: 0, target: 'one',
+        desc: '单体3段5伤害，按部位叠毒值；自损4HP，本次毒值额外+1；气势+1；自身血量<50%时获得狂怒1回合（每局限1次）',
+        use(B, me, ts) {
+          const t = ts[0];
+          for (let i = 0; i < 3; i++) B.hit(me, t, { dmg: 5, ele: ['毒', 1] });
+          B.selfDamage(me, 4);
+          B.stackElement(me, t, '毒', 1); // 本次毒值额外+1
+          B.gainQi(me, 1);
+          if (me.hp < me.maxHp * 0.5 && !me.ranpiRage) {
+            B.buff(me, '狂怒', 1);
+            me.ranpiRage = true;
+          }
+        } },
+
+      { name: '剐骨', cost: 5, target: 'one',
+        desc: '单体21伤害，按部位叠加6毒值；自损12HP，附加割裂3回合',
+        use(B, me, ts) {
+          const t = ts[0];
+          B.hit(me, t, { dmg: 21, ele: ['毒', 6] });
+          B.selfDamage(me, 12);
+          B.debuff(t, '割裂', 3);
+        } },
+
+      { name: '血祭', cost: 3, target: 'self',
+        desc: '献祭自身15%最大血量，清除自身所有减益，下次毒系技能伤害翻倍',
+        use(B, me) {
+          B.selfDamage(me, Math.floor(me.maxHp * 0.15));
+          B.clearDebuffs(me);
+          B.doubleNext(me);
+        } },
+
+      { name: '腐爆', cost: 6, target: 'one',
+        desc: '引爆目标全部毒值，1毒值转化3固定毒伤；击杀则回复爆炸伤害25%血量',
+        use(B, me, ts) {
+          const t = ts[0];
+          const v = (t.vals && t.vals['毒']) || 0;
+          if (v > 0) {
+            t.vals['毒'] = 0;
+            const dealt = B.hit(me, t, { dmg: v * 3, part: false });
+            if (t.hp <= 0) B.heal(me, me, Math.floor(dealt * 0.25));
+          }
+        } },
+
+      { name: '骸祭绝命', cost: 9, target: 'one',
+        desc: '扣除自身50%当前血量；单体附加12毒值并强制中毒；目标血量低于自身已损失血量则立即受到其最大生命100%的纯粹伤害',
+        use(B, me, ts) {
+          const t = ts[0];
+          B.selfDamage(me, Math.floor(me.hp / 2));
+          B.stackElement(me, t, '毒', 12);
+          B.addStatus(t, '中毒', 3);
+          if (t.hp < me.maxHp - me.hp) {
+            // 近似：引擎无「无视护盾/减伤」参数，临时摘掉护盾与减伤再还原
+            const shield = t.shield;
+            const reduce = t.reduce;
+            t.shield = null;
+            t.reduce = null;
+            B.hit(me, t, { dmg: t.maxHp, part: false, pure: true });
+            t.shield = shield;
+            t.reduce = reduce;
+          }
+        } },
+    ],
+  },
+]);
+
+// data/earth.js —— 土系 3 名：磐岩 / 沉壤 / 岩铠（岩印上限 5 层）
+registerChars([
+  {
+    name: '磐岩', element: '土', hp: 185, vital: 12, body: 30, role: '坦克',
+    spirit: [0, 3, -5],
+    passive: '每大回合结束，若自身未受伤害，自动+1层岩印（上限5层）；被击时消耗1层岩印抵消3点伤害；受到风系伤害-20%；毒值叠加减半', // 近似：岩印自动叠层与被击抵伤无引擎钩子，仅保留为档案文本
+    skills: [
+      {
+        name: '岩拳', cost: 0, target: 'one', desc: '单体12伤 +1岩印；自身气势+1；目标潮湿则+20%',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 12, mult: t.wet > 0 ? 1.2 : 1 });
+          B.mark(me, '岩印', Math.min(1, 5 - (me.marks.岩印 || 0)));
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '地刺', cost: 3, target: 'one', desc: '单体16伤 +2岩印；目标为水系或雷系额外+1岩印',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 16 });
+          const n = t.element === '水' || t.element === '雷' ? 3 : 2;
+          B.mark(me, '岩印', Math.min(n, 5 - (me.marks.岩印 || 0)));
+        },
+      },
+      {
+        name: '岩铠庇护', cost: 4, target: 'ally1', desc: '耗3层岩印，为己方单体附加岩铠护盾15·2回合（土系20）；清1个减益', // 近似：岩印不足3层时空放
+        use(B, me, [t]) {
+          if (!B.useMark(me, '岩印', 3)) { B.log.push('岩印不足3层，岩铠庇护未能发动'); return; }
+          B.shield(t, t.element === '土' ? 20 : 15, 2);
+          B.popDebuff(t);
+        },
+      },
+      {
+        name: '裂地崩击', cost: 5, target: 'two', desc: '相邻2名各14伤并各+1岩印，引爆其岩印（每层+4）后清空', // 近似：相邻选位交给 target 'two'；引爆按目标身上岩印结算
+        use(B, me, ts) {
+          ts.forEach((t) => {
+            B.hit(me, t, { dmg: 14 });
+            B.mark(t, '岩印', 1);
+            const n = t.marks.岩印 || 0;
+            if (n > 0) B.hit(me, t, { dmg: n * 4, part: false });
+            B.useMark(t, '岩印', n);
+          });
+        },
+      },
+      {
+        name: '万岩归宗', cost: 8, target: 'one', desc: '耗全部岩印（至少3层）：18+岩印×5伤；破甲2回合；自身岩铠20·2回合', // 近似：岩印不足3层时空放
+        use(B, me, [t]) {
+          const n = me.marks.岩印 || 0;
+          if (n < 3) { B.log.push('岩印不足3层，万岩归宗未能发动'); return; }
+          B.useMark(me, '岩印', n);
+          B.hit(me, t, { dmg: 18 + n * 5 });
+          B.debuff(t, '破甲', 2);
+          B.shield(me, 20, 2);
+        },
+      },
+    ],
+  },
+
+  {
+    name: '沉壤', element: '土', hp: 155, vital: 15, body: 38, role: '战士',
+    spirit: [1, 4, -4],
+    passive: '每大回合结束，若自身未受伤害，自动+1层岩印（上限5层）；被击时消耗1层岩印抵消3点伤害；受到风系伤害-20%；毒值叠加减半；岩印达到5层时自身锐锋1回合（每局限1次）', // 近似：岩印自动叠层、被击抵伤、满5层锐锋均无引擎钩子，仅保留为档案文本
+    skills: [
+      {
+        name: '碎石击', cost: 0, target: 'one', desc: '单体10伤 +1岩印；自身气势+1；岩印≥3层则+30%',
+        use(B, me, [t]) {
+          const cur = me.marks.岩印 || 0;
+          B.hit(me, t, { dmg: 10, mult: cur >= 3 ? 1.3 : 1 });
+          B.mark(me, '岩印', Math.min(1, 5 - cur));
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '陷地牢笼', cost: 3, target: 'one', desc: '单体13伤 +2岩印；目标下回合无法位移，风系伤害+20%', // 近似：位移封锁以「迟滞」记录；风系伤害+20%无对应API未实现
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 13 });
+          B.mark(me, '岩印', Math.min(2, 5 - (me.marks.岩印 || 0)));
+          B.debuff(t, '迟滞', 1);
+        },
+      },
+      {
+        name: '岩突穿刺', cost: 4, target: 'one', desc: '单体18伤 +2岩印；目标岩印≥2层则+50%并清除2层',
+        use(B, me, [t]) {
+          const tn = t.marks.岩印 || 0;
+          if (tn >= 2) B.useMark(t, '岩印', 2);
+          B.hit(me, t, { dmg: 18, mult: tn >= 2 ? 1.5 : 1 });
+          B.mark(me, '岩印', Math.min(2, 5 - (me.marks.岩印 || 0)));
+        },
+      },
+      {
+        name: '地脉震荡', cost: 5, target: 'all', desc: '全体10点AOE；带岩印目标额外受岩印×3伤害；自身贯通2回合',
+        use(B, me, ts) {
+          ts.forEach((t) => {
+            B.hit(me, t, { dmg: 10, aoe: true });
+            const n = t.marks.岩印 || 0;
+            if (n > 0) B.hit(me, t, { dmg: n * 3, part: false });
+          });
+          B.buff(me, '贯通', 2);
+        },
+      },
+      {
+        name: '山岳坠临', cost: 9, target: 'one', desc: '单体30伤 +相邻12溅射；主目标封印1回合；自身+5层岩印（满则转15护盾）', // 近似：满层转的护盾持续取2回合
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 30 });
+          B.splash(me, t, 12);
+          B.debuff(t, '封印', 1);
+          const cur = me.marks.岩印 || 0;
+          if (cur >= 5) B.shield(me, 15, 2);
+          else B.mark(me, '岩印', Math.min(5, 5 - cur));
+        },
+      },
+    ],
+  },
+
+  {
+    name: '岩铠', element: '土', hp: 175, vital: 8, body: 25, role: '坦克',
+    spirit: [-1, 2, -6],
+    passive: '每大回合未受伤自动+2层岩印（上限5层）；被击时消耗1层岩印抵消3点伤害；受到风/毒伤害-20%', // 近似：岩印自动叠层与被击抵伤无引擎钩子；毒伤-20%无对应抗性表项
+    skills: [
+      {
+        name: '盾击', cost: 0, target: 'one', desc: '单体10伤 +1岩印；自身气势+1',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 10 });
+          B.mark(me, '岩印', Math.min(1, 5 - (me.marks.岩印 || 0)));
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '岩石壁垒', cost: 3, target: 'ally1', desc: '己方单体护盾20·2回合；耗2层岩印再+8护盾',
+        use(B, me, [t]) {
+          let n = 20;
+          if (B.useMark(me, '岩印', 2)) n += 8;
+          B.shield(t, n, 2);
+        },
+      },
+      {
+        name: '地裂', cost: 4, target: 'one', desc: '单体20伤 +2岩印；水/雷/金系+40%',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 20, mult: ['水', '雷', '金'].includes(t.element) ? 1.4 : 1 });
+          B.mark(me, '岩印', Math.min(2, 5 - (me.marks.岩印 || 0)));
+        },
+      },
+      {
+        name: '山崩', cost: 5, target: 'two', desc: '相邻2名各14伤，各+1岩印；自身+2岩印', // 近似：相邻选位交给 target 'two'；「各叠加1层」记在目标身上
+        use(B, me, ts) {
+          ts.forEach((t) => { B.hit(me, t, { dmg: 14 }); B.mark(t, '岩印', 1); });
+          B.mark(me, '岩印', Math.min(2, 5 - (me.marks.岩印 || 0)));
+        },
+      },
+      {
+        name: '不灭之躯', cost: 9, target: 'self', desc: '自身回25血，获得5层岩印；本回合受伤-50%',
+        use(B, me) {
+          B.heal(me, 25);
+          B.mark(me, '岩印', Math.min(5, 5 - (me.marks.岩印 || 0)));
+          B.reduce(me, 0.5, 1);
+        },
+      },
+    ],
+  },
+]);
+
+// data/light.js —— 光系 3 名：晨晖 / 曙星 / 流光
+// 数据规范 v2。辉光 = B.mark(me,'辉光',n) 印记层数，与光元素异常「辉耀」无关。
+registerChars([
+  {
+    name: '晨晖', element: '光', hp: 135, vital: 10, body: 33, role: '治疗辅助',
+    spirit: [0, 3, -5],
+    passive: '每大回合开始净化自身1个Debuff；光系对暗/毒×1.3；每层辉光提升2%治疗和护盾效果',
+    // 近似：引擎未接被动（开局净化、对暗/毒×1.3、护盾加成），辉光治疗加成由 B.heal 结算
+    skills: [
+      {
+        name: '光耀', cost: 0, target: 'one',
+        desc: '单体8伤，叠加1层辉光；自身气势+1；辉光≥3层则+20%',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 8, mult: (me.marks.辉光 || 0) >= 3 ? 1.2 : 1 });
+          B.mark(me, '辉光', 1);
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '圣愈', cost: 3, target: 'ally1',
+        desc: '己方单体回12血；消耗2层辉光额外+5血；清除1个减益',
+        use(B, me, [t]) {
+          const bonus = B.useMark(me, '辉光', 2) ? 5 : 0;
+          B.heal(me, t, 12 + bonus);
+          B.popDebuff(t);
+        },
+      },
+      {
+        name: '辉光屏障', cost: 4, target: 'allies',
+        desc: '己方全体护盾8点·2回合；辉光≥3层则12点',
+        use(B, me, ts) {
+          const n = (me.marks.辉光 || 0) >= 3 ? 12 : 8;
+          ts.forEach((t) => B.shield(t, n, 2));
+        },
+      },
+      {
+        name: '审判之矛', cost: 5, target: 'one',
+        desc: '单体20伤，叠加2层辉光；暗/毒系×1.5；附加破甲1回合',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 20, mult: ['暗', '毒'].includes(t.element) ? 1.5 : 1 });
+          B.mark(me, '辉光', 2);
+          B.debuff(t, '破甲', 1);
+        },
+      },
+      {
+        name: '圣辉降临', cost: 8, target: 'allies',
+        desc: '己方全体回15血+锐锋2回合+清全体减益；消耗全部辉光（至少2层）每层+2血',
+        use(B, me, ts) {
+          const n = me.marks.辉光 || 0;
+          let bonus = 0;
+          if (n >= 2) { B.useMark(me, '辉光', n); bonus = n * 2; }
+          ts.forEach((t) => {
+            B.heal(me, t, 15 + bonus);
+            B.buff(t, '锐锋', 2);
+            B.clearDebuffs(t);
+          });
+        },
+      },
+    ],
+  },
+
+  {
+    name: '曙星', element: '光', hp: 130, vital: 14, body: 40, role: '法师',
+    spirit: [1, 4, -4],
+    passive: '同晨晖（伤害版）：每大回合开始净化自身1个Debuff；光系对暗/毒×1.3；每层辉光+2%伤害',
+    // 近似：引擎未接被动，「净化1个Debuff」「对暗/毒×1.3」「每层辉光+2%伤害」仅作展示
+    skills: [
+      {
+        name: '星闪', cost: 0, target: 'one',
+        desc: '单体10伤，叠加1层辉光；自身气势+1；咒印目标+30%',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 10, mult: (t.marks.咒印 || 0) > 0 ? 1.3 : 1 });
+          B.mark(me, '辉光', 1);
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '光裂斩', cost: 3, target: 'one',
+        desc: '单体14伤，叠加2层辉光；附加挫志1回合',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 14 });
+          B.mark(me, '辉光', 2);
+          B.debuff(t, '挫志', 1);
+        },
+      },
+      {
+        name: '净化之焰', cost: 4, target: 'one',
+        desc: '单体18伤，叠加2层辉光；清除虫卵（每枚+5伤）、咒印（每层+4伤）',
+        use(B, me, [t]) {
+          // 近似：虫卵/咒印按印记层数读取并清除
+          const eggs = t.marks.虫卵 || 0;
+          const xi = t.marks.咒印 || 0;
+          if (eggs) B.useMark(t, '虫卵', eggs);
+          if (xi) B.useMark(t, '咒印', xi);
+          B.hit(me, t, { dmg: 18 + eggs * 5 + xi * 4 });
+          B.mark(me, '辉光', 2);
+        },
+      },
+      {
+        name: '耀斑爆发', cost: 6, target: 'all',
+        desc: '全体12AOE；消耗全部辉光（至少2层）每层+4伤；暗系+30%',
+        use(B, me, ts) {
+          const n = me.marks.辉光 || 0;
+          let bonus = 0;
+          if (n >= 2) { B.useMark(me, '辉光', n); bonus = n * 4; }
+          // 近似：规则书的「统一一次判定」改为逐目标部位判定
+          ts.forEach((t) => B.hit(me, t, { dmg: 12 + bonus, mult: t.element === '暗' ? 1.3 : 1, aoe: true }));
+        },
+      },
+      {
+        name: '天穹制裁', cost: 9, target: 'one',
+        desc: '单体28伤+相邻14溅射；封印2回合；暗系×1.8；自身获得5层辉光',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 28, mult: t.element === '暗' ? 1.8 : 1 });
+          B.splash(me, t, 14); // 近似：溅射不吃暗系倍率
+          B.debuff(t, '封印', 2);
+          B.mark(me, '辉光', 5);
+        },
+      },
+    ],
+  },
+
+  {
+    name: '流光', element: '光', hp: 145, vital: 14, body: 36, role: '惩戒骑士',
+    spirit: [2, 5, -3],
+    passive: '同晨晖：每大回合开始净化自身1个Debuff；光系对暗/毒×1.3；每层辉光提升2%治疗和护盾效果',
+    // 近似：引擎未接被动（开局净化、对暗/毒×1.3、护盾加成），辉光治疗加成由 B.heal 结算
+    skills: [
+      {
+        name: '辉光斩', cost: 0, target: 'one',
+        desc: '单体10伤，叠加1层辉光；自身气势+1',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 10 });
+          B.mark(me, '辉光', 1);
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '圣光裁决', cost: 3, target: 'one',
+        desc: '单体18伤，叠加2层辉光；暗/毒系+40%',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 18, mult: ['暗', '毒'].includes(t.element) ? 1.4 : 1 });
+          B.mark(me, '辉光', 2);
+        },
+      },
+      {
+        name: '光辉护盾', cost: 4, target: 'allies',
+        desc: '己方全体护盾10点·2回合；自身获得2层辉光',
+        use(B, me, ts) {
+          ts.forEach((t) => B.shield(t, 10, 2));
+          B.mark(me, '辉光', 2);
+        },
+      },
+      {
+        name: '净化之光', cost: 5, target: 'allies',
+        desc: '清除己方全体Debuff；对敌方全体造成10点伤害',
+        use(B, me, ts) {
+          ts.forEach((t) => B.clearDebuffs(t));
+          // 近似：规则书的「统一一次部位判定」改为逐目标部位判定
+          B.live(B.foesOf(me)).forEach((t) => B.hit(me, t, { dmg: 10, aoe: true }));
+        },
+      },
+      {
+        name: '天罚', cost: 8, target: 'one',
+        desc: '单体30伤+相邻14溅射；暗/毒系×1.5',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 30, mult: ['暗', '毒'].includes(t.element) ? 1.5 : 1 });
+          B.splash(me, t, 14); // 近似：溅射不吃暗/毒倍率
+        },
+      },
+    ],
+  },
+]);
+
+// data/dark.js —— 暗系 3 名：冥影 / 夜煞 / 影刃
+// 数据规范 v2。咒印 = B.mark(u,'咒印',n)，上限 5 层（引擎的 B.mark 只钳到 99，封顶在各技能里用 add 处理）；
+// 消耗一律走 B.useMark。每层咒印的加减伤、开局随机挂印等被动见各角色 passive 下的近似说明。
+registerChars([
+  {
+    name: '冥影', element: '暗', hp: 105, vital: 20, body: 44, role: '刺客',
+    spirit: [2, 5, -3],
+    passive: '每大回合开始随机给1名敌方附加1层咒印（上限5层）；攻击带咒印目标回3血；受到光系-20%；受到火系火值叠加减半；每层咒印使目标伤害-3%',
+    // 近似：引擎没有「大回合开始」钩子，开局随机挂印改在当回合首次行动时补结算；
+    // 受光-20% / 受火火值叠加减半由引擎 RESIST 的暗系条目统一结算；
+    // 「每层咒印使目标伤害-3%」没有出手伤害的修正点，仅作展示。
+    skills: [
+      {
+        name: '暗刃', cost: 0, target: 'one',
+        desc: '单体10伤害，叠加1层咒印；自身气势+1；目标有咒印则+20%',
+        use(B, me, [t]) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：被动「开局挂咒印」在首次行动时补结算
+          const had = (t.marks.咒印 || 0) > 0;
+          B.hit(me, t, { dmg: 10, mult: had ? 1.2 : 1 });
+          if (had) B.heal(me, me, 3); // 被动：攻击带咒印目标回3血（无攻击后钩子，逐技能补）
+          add(t, 1);
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '蚀能之触', cost: 3, target: 'one',
+        desc: '单体14伤害，叠加2层咒印；目标失去2气势（不足则归0）',
+        use(B, me, [t]) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          const had = (t.marks.咒印 || 0) > 0;
+          B.hit(me, t, { dmg: 14 });
+          if (had) B.heal(me, me, 3);
+          add(t, 2);
+          B.gainQi(t, -2); // 目标失去2气势，B.gainQi 自带 0 下限
+        },
+      },
+      {
+        name: '暗影步', cost: 4, target: 'one',
+        desc: '单体16伤害，叠加2层咒印；本回合无敌；击杀则下回合0费+1次',
+        use(B, me, [t]) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          const had = (t.marks.咒印 || 0) > 0;
+          B.hit(me, t, { dmg: 16 });
+          if (had) B.heal(me, me, 3);
+          add(t, 2);
+          B.invuln(me, 1);
+          if (!t.alive) { me.freeNext = 1; B.log.push('暗影步击杀：下回合 0 费 +1 次（引擎无额外行动结算，仅记录）'); } // 近似：引擎没有「下回合额外行动」结算点
+        },
+      },
+      {
+        name: '诅咒蔓延', cost: 5, target: 'one',
+        desc: '目标及相邻各12伤害，分别判定部位；目标附加迟滞1回合；消耗目标全部咒印（至少1层）每层+5伤害',
+        use(B, me, [t]) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          const n = t.marks.咒印 || 0;
+          const had = n > 0;
+          if (n > 0) B.useMark(t, '咒印', n);
+          const bonus = Math.max(1, n) * 5; // 近似：无咒印时仍按「至少1层」+5
+          const foes = B.foesOf(t);
+          const i = foes.indexOf(t);
+          [t, foes[i - 1], foes[i + 1]].filter((x) => x && x.alive).forEach((x) => {
+            B.hit(me, x, { dmg: 12 + (x === t ? bonus : 0) }); // 近似：规则未写明+5加算范围，只加在主目标上
+          });
+          if (had) B.heal(me, me, 3);
+          B.debuff(t, '迟滞', 1);
+        },
+      },
+      {
+        name: '暗渊降临', cost: 9, target: 'all',
+        desc: '全体15AOE，统一一次部位判定；全体+1咒印；暗系额外+30%；自身回已损失血量30%',
+        use(B, me, ts) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          ts.forEach((t) => {
+            const had = (t.marks.咒印 || 0) > 0;
+            B.hit(me, t, { dmg: 15, mult: t.element === '暗' ? 1.3 : 1, aoe: true }); // 近似：「统一一次判定」改为逐目标独立判定部位
+            if (had) B.heal(me, me, 3);
+            add(t, 1);
+          });
+          B.heal(me, me, Math.floor((me.maxHp - me.hp) * 0.3));
+        },
+      },
+    ],
+  },
+
+  {
+    name: '夜煞', element: '暗', hp: 105, vital: 18, body: 41, role: '诅咒法师',
+    spirit: [1, 5, -3],
+    passive: '每大回合开始随机给1名敌方附加1层咒印（上限5层）；攻击带咒印目标回3血；受到光系-20%；受到火系火值叠加减半；每层咒印使自身受伤-2%（上限5层，即-10%）；敌方全体咒印总数≥10层时己方全体狂怒1回合（每局限1次）',
+    // 近似：开局随机挂印改为当回合首次行动时补结算；受光-20% / 受火火值减半由引擎 RESIST 结算；
+    // 「每层咒印使自身受伤-2%」没有按目标修正受伤的入口，仅作展示；
+    // 「总数≥10层则己方全体狂怒」改为每次行动后检查一次，每局只触发一次。
+    skills: [
+      {
+        name: '噬魂', cost: 0, target: 'one',
+        desc: '单体8伤害，叠加1层咒印；自身气势+1；目标咒印≥3层则+40%',
+        use(B, me, [t]) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          const had = (t.marks.咒印 || 0) > 0;
+          const ge3 = (t.marks.咒印 || 0) >= 3;
+          B.hit(me, t, { dmg: 8, mult: ge3 ? 1.4 : 1 });
+          if (had) B.heal(me, me, 3);
+          add(t, 1);
+          B.gainQi(me, 1);
+          const totMarks = B.live(B.foesOf(me)).reduce((s, u) => s + (u.marks.咒印 || 0), 0);
+          if (totMarks >= 10 && !me.rageUsed) { me.rageUsed = true; B.alliesOf(me).forEach((a) => B.buff(a, '狂怒', 1)); B.log.push('敌方咒印总数≥10层：己方全体狂怒1回合（每局限1次）'); } // 近似：无自动触发钩子，改为每次行动后检查
+        },
+      },
+      {
+        name: '恐惧低语', cost: 3, target: 'one',
+        desc: '单体12伤害，叠加2层咒印；附加挫志2回合',
+        use(B, me, [t]) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          const had = (t.marks.咒印 || 0) > 0;
+          B.hit(me, t, { dmg: 12 });
+          if (had) B.heal(me, me, 3);
+          add(t, 2);
+          B.debuff(t, '挫志', 2);
+          const totMarks = B.live(B.foesOf(me)).reduce((s, u) => s + (u.marks.咒印 || 0), 0);
+          if (totMarks >= 10 && !me.rageUsed) { me.rageUsed = true; B.alliesOf(me).forEach((a) => B.buff(a, '狂怒', 1)); B.log.push('敌方咒印总数≥10层：己方全体狂怒1回合（每局限1次）'); } // 近似：同上
+        },
+      },
+      {
+        name: '咒爆', cost: 4, target: 'one',
+        desc: '消耗目标全部咒印，每层6固定伤害；击杀则自身获得蓄势',
+        use(B, me, [t]) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          const totMarks = B.live(B.foesOf(me)).reduce((s, u) => s + (u.marks.咒印 || 0), 0);
+          if (totMarks >= 10 && !me.rageUsed) { me.rageUsed = true; B.alliesOf(me).forEach((a) => B.buff(a, '狂怒', 1)); B.log.push('敌方咒印总数≥10层：己方全体狂怒1回合（每局限1次）'); } // 近似：消耗前检查
+          const n = t.marks.咒印 || 0;
+          const had = n > 0;
+          if (n > 0) B.useMark(t, '咒印', n);
+          if (n > 0) B.hit(me, t, { dmg: n * 6, part: false, pure: true });
+          if (had) B.heal(me, me, 3);
+          if (!t.alive) { B.buff(me, '蓄势', 1); B.log.push('咒爆击杀：夜煞获得蓄势（引擎无蓄势数值，仅记录）'); } // 近似：蓄势没有真实数值
+        },
+      },
+      {
+        name: '暗锁囚笼', cost: 5, target: 'two',
+        desc: '相邻2名各10伤害，各叠加2层咒印；目标下回合无法使用0费技能',
+        use(B, me, ts) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          ts.forEach((t) => {
+            const had = (t.marks.咒印 || 0) > 0;
+            B.hit(me, t, { dmg: 10 });
+            if (had) B.heal(me, me, 3);
+            add(t, 2);
+            t.noZeroNext = 1;
+          });
+          B.log.push('目标下回合无法使用 0 费技能（引擎无该结算点，仅打标记记录）'); // 近似：引擎没有「下回合禁 0 费」的入口
+          const totMarks = B.live(B.foesOf(me)).reduce((s, u) => s + (u.marks.咒印 || 0), 0);
+          if (totMarks >= 10 && !me.rageUsed) { me.rageUsed = true; B.alliesOf(me).forEach((a) => B.buff(a, '狂怒', 1)); B.log.push('敌方咒印总数≥10层：己方全体狂怒1回合（每局限1次）'); } // 近似：同上
+        },
+      },
+      {
+        name: '万咒归墟', cost: 10, target: 'all',
+        desc: '消耗敌方全体所有咒印，每层8固定伤害；自身回复该伤害的20%血量；总咒印≥8层则全体破甲2回合',
+        use(B, me, ts) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          const before = ts.reduce((s, t) => s + (t.marks.咒印 || 0), 0);
+          if (before >= 10 && !me.rageUsed) { me.rageUsed = true; B.alliesOf(me).forEach((a) => B.buff(a, '狂怒', 1)); B.log.push('敌方咒印总数≥10层：己方全体狂怒1回合（每局限1次）'); } // 近似：消耗前检查
+          let dealt = 0;
+          ts.forEach((t) => {
+            const n = t.marks.咒印 || 0;
+            if (n <= 0) return;
+            B.useMark(t, '咒印', n);
+            B.hit(me, t, { dmg: n * 8, part: false, pure: true });
+            dealt += n * 8;
+          });
+          B.heal(me, me, Math.floor(dealt * 0.2));
+          if (before >= 8) ts.forEach((t) => B.debuff(t, '破甲', 2));
+        },
+      },
+    ],
+  },
+
+  {
+    name: '影刃', element: '暗', hp: 105, vital: 24, body: 42, role: '刺客',
+    spirit: [2, 5, -3],
+    passive: '每大回合开始给1名敌方附加1层咒印（上限5层）；攻击带咒印目标回4血；对光/风系+30%',
+    // 近似：开局挂印改为当回合首次行动时补结算；对光/风+30% 与回4血已写进各伤害技能；
+    // 暗系通用的受光-20% / 受火火值减半由引擎 RESIST 结算，本角色被动未列但仍会吃到。
+    skills: [
+      {
+        name: '暗刺', cost: 0, target: 'one',
+        desc: '单体12伤害，叠加1层咒印；自身气势+1',
+        use(B, me, [t]) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          const boost = me.nextBoost ? 1.5 : 1;
+          me.nextBoost = false;
+          const had = (t.marks.咒印 || 0) > 0;
+          B.hit(me, t, { dmg: 12, mult: (['光', '风'].includes(t.element) ? 1.3 : 1) * boost });
+          if (had) B.heal(me, me, 4);
+          add(t, 1);
+          B.gainQi(me, 1);
+        },
+      },
+      {
+        name: '影袭', cost: 3, target: 'one',
+        desc: '单体18伤害，叠加2层咒印；目标带咒印则+30%',
+        use(B, me, [t]) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          const boost = me.nextBoost ? 1.5 : 1;
+          me.nextBoost = false;
+          const had = (t.marks.咒印 || 0) > 0;
+          B.hit(me, t, { dmg: 18, mult: (had ? 1.3 : 1) * (['光', '风'].includes(t.element) ? 1.3 : 1) * boost });
+          if (had) B.heal(me, me, 4);
+          add(t, 2);
+        },
+      },
+      {
+        name: '暗影斗篷', cost: 4, target: 'self',
+        desc: '本回合无敌；下次技能伤害+50%',
+        use(B, me) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          B.invuln(me, 1);
+          me.nextBoost = 1.5; // 由后续伤害技能读取并清除；引擎只有 doubleNext(×2)，没有 ×1.5 钩子
+          B.log.push('影刃下次技能伤害 +50%（由后续技能自行结算）');
+        },
+      },
+      {
+        name: '诅咒飞刃', cost: 5, target: 'two',
+        desc: '两名可重复目标各14伤害，各叠加2层咒印',
+        use(B, me, ts) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          const boost = me.nextBoost ? 1.5 : 1;
+          me.nextBoost = false;
+          const list = [ts[0], ts[1] || ts[0]]; // 近似：引擎不支持自选重复目标，只拿到两名，不足两名时对同一目标连打两发
+          list.forEach((t) => {
+            if (!t || !t.alive) return;
+            const had = (t.marks.咒印 || 0) > 0;
+            B.hit(me, t, { dmg: 14, mult: (['光', '风'].includes(t.element) ? 1.3 : 1) * boost });
+            if (had) B.heal(me, me, 4);
+            add(t, 2);
+          });
+        },
+      },
+      {
+        name: '暗杀', cost: 8, target: 'one',
+        desc: '单体34伤害；目标血量＜40%时×1.8；击杀后自身+1层愈战',
+        use(B, me, [t]) {
+          const add = (u, n = 1) => B.mark(u, '咒印', Math.min(n, Math.max(0, 5 - (u.marks.咒印 || 0))));
+          if (me.tickRound !== B.round) { me.tickRound = B.round; const fs = B.live(B.foesOf(me)); if (fs.length) add(fs[Math.floor(B.rnd() * fs.length)], 1); } // 近似：同被动，开局挂印在首次行动时补结算
+          const boost = me.nextBoost ? 1.5 : 1;
+          me.nextBoost = false;
+          const had = (t.marks.咒印 || 0) > 0;
+          B.hit(me, t, { dmg: 34, mult: (t.hp < t.maxHp * 0.4 ? 1.8 : 1) * (['光', '风'].includes(t.element) ? 1.3 : 1) * boost });
+          if (had) B.heal(me, me, 4);
+          if (!t.alive) B.stack(me, '愈战', 1);
+        },
+      },
+    ],
+  },
+]);
+
+// data/metal.js —— 金系 3 名：铮锋 / 铁骨 / 铁心
+// 数据规范 v2。锋锐印记在自身：B.mark(me,'锋锐印',n)；破片：B.debuff(t,'破片',3)，35% 用 B.rnd() < 0.35。
+// 近似：引擎的 debuff 只记回合数，破片的「上限3层、每层扣4血」只能记成一次 3 回合的破片。
+registerChars([
+  {
+    name: '铮锋', element: '金', hp: 165, vital: 16, body: 40, role: '战士',
+    spirit: [2, 5, -3],
+    passive: '攻击护甲部位伤害+20%；每层锋锐印使护甲被命中率+3%（上限+15%）；受到木系伤害-25%；自身武器耐久损耗减半',
+    // 近似：引擎未接被动（护甲部位+20%、每层护甲命中率+3%、耐久损耗减半仅作文本）；木系伤害-25% 由引擎金属性抗性表结算
+    skills: [
+      {
+        name: '金刃斩', cost: 0, target: 'one',
+        desc: '单体10伤，叠加1层锋锐印；自身气势+1；命中护甲部位额外+1层锋锐印；35%附加1层破片',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 10 });
+          B.mark(me, '锋锐印', 1);
+          B.gainQi(me, 1);
+          if (B.rnd() * 100 < t.parts.armor) B.mark(me, '锋锐印', 1); // 近似：引擎不返回命中部位，按目标护甲率独立掷一次判定
+          if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+        },
+      },
+      {
+        name: '破甲突刺', cost: 3, target: 'one',
+        desc: '单体14伤，叠加2层锋锐印；木/风/雷系+30%；附加破甲2回合；35%附加1层破片',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 14, mult: ['木', '风', '雷'].includes(t.element) ? 1.3 : 1 });
+          B.mark(me, '锋锐印', 2);
+          B.debuff(t, '破甲', 2);
+          if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+        },
+      },
+      {
+        name: '锋锐流转', cost: 4, target: 'one',
+        desc: '消耗全部锋锐印（至少2层）：基础16+层数×4伤害，无视护甲减伤；击杀获得蓄势；35%附加1层破片',
+        // 近似：锋锐印不足2层时空放；蓄势用引擎的「下一段伤害翻倍」；无视护甲减伤以 part:false 表示（因此也不做部位判定）
+        use(B, me, [t]) {
+          const n = me.marks.锋锐印 || 0;
+          if (n < 2) { B.log.push('锋锐印不足2层，锋锐流转未能发动'); return; }
+          B.useMark(me, '锋锐印', n);
+          B.hit(me, t, { dmg: 16 + n * 4, part: false });
+          if (t.hp <= 0) B.doubleNext(me);
+          if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+        },
+      },
+      {
+        name: '裂甲斩', cost: 5, target: 'two',
+        desc: '相邻2名各12伤，各叠2层锋锐印；目标带破甲则+50%；每个目标独立35%附加1层破片',
+        // 近似：引擎无站位，相邻2名由 target 'two' 自选；「各叠2层」按每个命中目标各叠2层结算
+        use(B, me, ts) {
+          ts.forEach((t) => {
+            B.hit(me, t, { dmg: 12, mult: B.hasDebuff(t, '破甲') ? 1.5 : 1 });
+            B.mark(me, '锋锐印', 2);
+            if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+          });
+        },
+      },
+      {
+        name: '万锋归宗', cost: 9, target: 'all',
+        desc: '全体15点AOE，统一一次判定；附加破甲3回合；自身获得5层锋锐印；金系对带破甲目标伤害+25%（本场）；每个目标独立35%附加1层破片',
+        // 近似：规则书的「统一一次判定」改为逐目标部位判定；「金系对带破甲+25%持续本场」无全场钩子未实现（引擎对破甲已有 ×1.2）
+        use(B, me, ts) {
+          ts.forEach((t) => {
+            B.hit(me, t, { dmg: 15, aoe: true });
+            B.debuff(t, '破甲', 3);
+            if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+          });
+          B.mark(me, '锋锐印', 5);
+        },
+      },
+    ],
+  },
+
+  {
+    name: '铁骨', element: '金', hp: 180, vital: 10, body: 28, role: '坦克',
+    spirit: [1, 4, -4],
+    passive: '攻击护甲部位伤害+20%；每层锋锐印使护甲被命中率+3%（上限+15%）；受到木系伤害-25%；自身武器耐久损耗减半；被攻击时若伤害＞15点，自身获得1层锋锐印（每回合限1次）',
+    // 近似：引擎未接被动（护甲部位+20%、每层护甲命中率+3%、耐久损耗减半、被击＞15点叠印仅作文本）；木系伤害-25% 由引擎金属性抗性表结算
+    skills: [
+      {
+        name: '铁壁击', cost: 0, target: 'one',
+        desc: '单体8伤，叠加1层锋锐印；自身气势+1；本回合受伤-3；35%附加1层破片',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 8 });
+          B.mark(me, '锋锐印', 1);
+          B.gainQi(me, 1);
+          B.shield(me, 3, 1); // 近似：本回合受伤-3 用 3 点护盾（1回合）表示，引擎无固定减伤
+          if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+        },
+      },
+      {
+        name: '金刚不坏', cost: 3, target: 'self',
+        desc: '自身护盾15点（2回合）；锋锐印≥3层则22点；清除1个减益',
+        use(B, me) {
+          B.shield(me, (me.marks.锋锐印 || 0) >= 3 ? 22 : 15, 2);
+          B.popDebuff(me);
+        },
+      },
+      {
+        name: '反击之刃', cost: 4, target: 'one',
+        desc: '单体16伤，叠加2层锋锐印；本回合曾受攻击则+50%；附加挫志1回合；35%附加1层破片',
+        // 近似：「本回合曾受攻击」用引擎的 hurtThisRound（本回合已受伤）判定
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 16, mult: me.hurtThisRound ? 1.5 : 1 });
+          B.mark(me, '锋锐印', 2);
+          B.debuff(t, '挫志', 1);
+          if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+        },
+      },
+      {
+        name: '铁幕横扫', cost: 5, target: 'all',
+        desc: '全体10点AOE，统一一次判定，各叠1层锋锐印；自身贯通3回合；本回合自身护甲被命中率-10%；每个目标独立35%附加1层破片',
+        // 近似：「统一一次判定」改为逐目标部位判定；「本回合护甲被命中率-10%」无回合内修正钩子，未实现
+        use(B, me, ts) {
+          ts.forEach((t) => {
+            B.hit(me, t, { dmg: 10, aoe: true });
+            B.mark(me, '锋锐印', 1);
+            if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+          });
+          B.buff(me, '贯通', 3);
+        },
+      },
+      {
+        name: '千钧镇岳', cost: 8, target: 'one',
+        desc: '单体25伤，相邻10溅射；主目标封印2回合；自身获得5层锋锐印，回12血；35%附加1层破片',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 25 });
+          B.splash(me, t, 10);
+          B.debuff(t, '封印', 2);
+          B.mark(me, '锋锐印', 5);
+          B.heal(me, 12);
+          if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+        },
+      },
+    ],
+  },
+
+  {
+    name: '铁心', element: '金', hp: 155, vital: 16, body: 38, role: '狂战士',
+    spirit: [3, 6, -2],
+    passive: '攻击护甲部位伤害+20%；每层锋锐印使护甲被命中率+3%（上限+15%）；自身血量每降低10%，伤害+5%（上限+30%）',
+    // 近似：引擎未接被动（护甲部位+20%、每层护甲命中率+3%、损失血量增伤仅作文本）
+    skills: [
+      {
+        name: '铁斩', cost: 0, target: 'one',
+        desc: '单体12伤，叠加1层锋锐印；自身气势+1；35%附加1层破片',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 12 });
+          B.mark(me, '锋锐印', 1);
+          B.gainQi(me, 1);
+          if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+        },
+      },
+      {
+        name: '破甲猛击', cost: 3, target: 'one',
+        desc: '单体18伤，叠加2层锋锐印；附加破甲2回合；35%附加1层破片',
+        use(B, me, [t]) {
+          B.hit(me, t, { dmg: 18 });
+          B.mark(me, '锋锐印', 2);
+          B.debuff(t, '破甲', 2);
+          if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+        },
+      },
+      {
+        name: '狂战之心', cost: 4, target: 'self',
+        desc: '自身狂怒2回合；消耗2层锋锐印使狂怒+1回合',
+        use(B, me) {
+          B.buff(me, '狂怒', B.useMark(me, '锋锐印', 2) ? 3 : 2);
+        },
+      },
+      {
+        name: '旋风斩', cost: 5, target: 'two',
+        desc: '相邻2名各16伤，各叠1层锋锐印；每个目标独立35%附加1层破片',
+        // 近似：引擎无站位，相邻2名由 target 'two' 自选
+        use(B, me, ts) {
+          ts.forEach((t) => {
+            B.hit(me, t, { dmg: 16 });
+            B.mark(me, '锋锐印', 1);
+            if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+          });
+        },
+      },
+      {
+        name: '灭世铁拳', cost: 8, target: 'one',
+        desc: '单体32伤；护甲部位时×2.0；自身回15血；35%附加1层破片',
+        use(B, me, [t]) {
+          const onArmor = B.rnd() * 100 < t.parts.armor;
+          B.hit(me, t, { dmg: 32, mult: onArmor ? 2.0 : 1 }); // 近似：引擎不返回命中部位，按目标护甲率独立掷一次判定来套 ×2.0
+          B.heal(me, 15);
+          if (B.rnd() < 0.35) B.debuff(t, '破片', 3);
+        },
+      },
+    ],
+  },
+]);
+
+// 木系 3 名：青藤 / 苍柏 / 灵木（生息印）
+registerChars([
+  {
+    name: '青藤', element: '木', hp: 145, vital: 13, body: 35, role: '治疗', spirit: [0, 3, -5],
+    passive: '每大回合开始血量<50%自动+1生息印；每层生息印治疗+3%；对土/水/雷伤害+15%；毒值叠加减半',
+    skills: [
+      { name: '藤鞭', cost: 0, target: 'one', desc: '单体8伤，+1生息印；潮湿目标+20%',
+        use(B, me, ts) {
+          const t = ts[0];
+          B.hit(me, t, { dmg: 8, mult: t.wet > 0 ? 1.2 : 1 });
+          B.mark(me, '生息印', 1);
+          B.gainQi(me, 1);
+        } },
+      { name: '生息之触', cost: 3, target: 'ally1', desc: '回12血；消耗2生息印再+8；清1减益',
+        use(B, me, ts) {
+          const bonus = B.useMark(me, '生息印', 2) ? 8 : 0;
+          B.heal(me, ts[0], 12 + bonus);
+          B.popDebuff(ts[0]);
+        } },
+      { name: '缠绕之蔓', cost: 4, target: 'one', desc: '单体14伤，+2生息印；迟滞2回合；土/水/雷+30%',
+        use(B, me, ts) {
+          const t = ts[0];
+          B.hit(me, t, { dmg: 14, mult: ['土', '水', '雷'].includes(t.element) ? 1.3 : 1 });
+          B.mark(me, '生息印', 2);
+          B.debuff(t, '迟滞', 2);
+        } },
+      { name: '复苏之风', cost: 5, target: 'allies', desc: '全体回10血；消耗全部生息印每层+3；全体贯通2回合',
+        use(B, me, ts) {
+          const n = me.marks['生息印'] || 0;
+          me.marks['生息印'] = 0;
+          ts.forEach((t) => { B.heal(me, t, 10 + (n >= 2 ? n * 3 : 0)); B.buff(t, '贯通', 2); });
+        } },
+      { name: '万木逢春', cost: 8, target: 'allies', desc: '全体回15血+锐锋2回合+清全体减益；自身+5生息印',
+        use(B, me, ts) {
+          ts.forEach((t) => { B.heal(me, t, 15); B.buff(t, '锐锋', 2); B.clearDebuffs(t); });
+          B.mark(me, '生息印', 5);
+        } },
+    ],
+  },
+
+  {
+    name: '苍柏', element: '木', hp: 145, vital: 15, body: 40, role: '战士', spirit: [1, 4, -4],
+    passive: '同青藤；生息印满5层时自身狂怒1回合（每局限1次）',
+    skills: [
+      { name: '木刺', cost: 0, target: 'one', desc: '单体10伤，+1生息印；自身血量<50%则+30%',
+        use(B, me, ts) {
+          B.hit(me, ts[0], { dmg: 10, mult: me.hp < me.maxHp * 0.5 ? 1.3 : 1 });
+          B.mark(me, '生息印', 1);
+          B.gainQi(me, 1);
+        } },
+      { name: '翠叶飞刃', cost: 3, target: 'one', desc: '单体16伤，+2生息印；土/水/雷+40%',
+        use(B, me, ts) {
+          const t = ts[0];
+          B.hit(me, t, { dmg: 16, mult: ['土', '水', '雷'].includes(t.element) ? 1.4 : 1 });
+          B.mark(me, '生息印', 2);
+        } },
+      { name: '藤蔓爆破', cost: 4, target: 'one', desc: '消耗目标全部生息印（至少2层）每层5固定伤；击杀回10血',
+        use(B, me, ts) {
+          const t = ts[0];
+          const n = t.marks['生息印'] || 0;
+          if (n >= 2) {
+            t.marks['生息印'] = 0;
+            const dealt = B.hit(me, t, { dmg: n * 5, part: false });
+            if (t.hp <= 0) B.heal(me, me, 10);
+          } else {
+            B.log.push('目标生息印不足 2 层，藤蔓爆破落空');
+          }
+        } },
+      { name: '森罗万象', cost: 6, target: 'all', desc: '全体10伤，各+1生息印；消耗全部生息印每层+4伤；全体破甲2回合',
+        use(B, me, ts) {
+          const n = me.marks['生息印'] || 0;
+          me.marks['生息印'] = 0;
+          ts.forEach((t) => {
+            B.hit(me, t, { dmg: 10 + (n >= 2 ? n * 4 : 0), aoe: true });
+            B.debuff(t, '破甲', 2);
+          });
+        } },
+      { name: '古木参天', cost: 9, target: 'one', desc: '30伤+相邻12溅射；主目标封印1回合；自身+5生息印回15血；土/水/雷×1.5',
+        use(B, me, ts) {
+          const t = ts[0];
+          B.hit(me, t, { dmg: 30, mult: ['土', '水', '雷'].includes(t.element) ? 1.5 : 1 });
+          B.splash(me, t, 12);
+          B.debuff(t, '封印', 1);
+          B.mark(me, '生息印', 5);
+          B.heal(me, me, 15);
+        } },
+    ],
+  },
+
+  {
+    name: '灵木', element: '木', hp: 145, vital: 12, body: 34, role: '辅助', spirit: [0, 3, -5],
+    passive: '每大回合开始血量<50%自动+1生息印；每层生息印治疗+3%；毒值叠加减半',
+    skills: [
+      { name: '木槌', cost: 0, target: 'one', desc: '单体10伤，+1生息印',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 10 }); B.mark(me, '生息印', 1); B.gainQi(me, 1); } },
+      { name: '自然治愈', cost: 3, target: 'ally1', desc: '回16血；消耗2生息印再+8',
+        use(B, me, ts) {
+          const bonus = B.useMark(me, '生息印', 2) ? 8 : 0;
+          B.heal(me, ts[0], 16 + bonus);
+        } },
+      { name: '藤蔓缠绕', cost: 4, target: 'one', desc: '单体16伤，+2生息印；迟滞2回合',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 16 }); B.mark(me, '生息印', 2); B.debuff(ts[0], '迟滞', 2); } },
+      { name: '森之屏障', cost: 5, target: 'allies', desc: '己方全体护盾12（2回合）；自身+2生息印',
+        use(B, me, ts) { ts.forEach((t) => B.shield(t, 12, 2)); B.mark(me, '生息印', 2); } },
+      { name: '万物复苏', cost: 8, target: 'allies', desc: '全体回18血+锐锋2回合；消耗全部生息印每层+3血',
+        use(B, me, ts) {
+          const n = me.marks['生息印'] || 0;
+          me.marks['生息印'] = 0;
+          ts.forEach((t) => { B.heal(me, t, 18 + n * 3); B.buff(t, '锐锋', 2); });
+        } },
+    ],
+  },
+]);
+
+// 无属性 4 名：碧尘 / 青穹 / 殷红 / 沧嵐
+registerChars([
+  {
+    name: '碧尘', element: '无', hp: 145, vital: 10, body: 35, role: '战士', spirit: [1, 4, -4],
+    passive: '被 2 名不同敌方各攻击 1 次额外 +1 气势（引擎未接入钩子）',
+    skills: [
+      { name: '撼地', cost: 0, target: 'one', desc: '单体8伤，自身+1气势；气势<3时再+1（每局限2次）',
+        use(B, me, ts) {
+          B.hit(me, ts[0], { dmg: 8 });
+          B.gainQi(me, 1);
+          if (me.qi < 3 && (me.gandi || 0) < 2) { B.gainQi(me, 1); me.gandi = (me.gandi || 0) + 1; }
+        } },
+      { name: '冲山', cost: 5, target: 'two', desc: '主目标两段6伤，另一目标5伤',
+        use(B, me, ts) {
+          const [t1, t2] = ts;
+          B.hit(me, t1, { dmg: 6 }); B.hit(me, t1, { dmg: 6 });
+          if (t2 && t2 !== t1) B.hit(me, t2, { dmg: 5 });
+        } },
+      { name: '磊势', cost: 2, target: 'self', desc: '下回合冲山不消耗气势',
+        use(B, me) { me.freeChongshan = true; B.log.push('磊势：下回合冲山免气'); } },
+      { name: '裂地', cost: 5, target: 'two', desc: '两名各7伤',
+        use(B, me, ts) { ts.forEach((t) => B.hit(me, t, { dmg: 7 })); } },
+      { name: '压顶', cost: 3, target: 'one', desc: '单体10伤 + 相邻5溅射',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 10 }); B.splash(me, ts[0], 5); } },
+    ],
+  },
+
+  {
+    name: '青穹', element: '无', hp: 150, vital: 10, body: 25, role: '坦克', spirit: [0, 3, -4],
+    passive: '首次血量归零时无敌且无法行动，下回合开始回满 150 血、气势清零；复活后 2 回合不能接受治疗护盾，3 回合内受击 +15%；二次阵亡退场（复活由引擎未接入，用 B.log 标注）',
+    skills: [
+      { name: '不坏', cost: 2, target: 'self', desc: '接下来2回合每次受到技能伤害固定-4',
+        use(B, me) { B.reduce(me, 0.15, 2); B.shield(me, 8, 2); B.log.push('不坏：近似为减伤 15% + 8 护盾'); } },
+      { name: '散气', cost: 3, target: 'one', desc: '单体22伤；目标气势≥5则失去2气势（每局限1次）',
+        use(B, me, ts) {
+          B.hit(me, ts[0], { dmg: 22 });
+          if (ts[0].qi >= 5 && !me.sanqiUsed) { ts[0].qi = Math.max(0, ts[0].qi - 2); me.sanqiUsed = true; }
+        } },
+      { name: '沐冰', cost: 4, target: 'self', desc: '接下来2回合技能命中按部位给目标+1冰值',
+        use(B, me) { me.muBing = 2; B.buff(me, '沐冰', 2); B.log.push('沐冰：2 回合内命中额外 +1 冰值'); } },
+      { name: '震天', cost: 5, target: 'one', desc: '单体19伤；自身至下回合前无敌',
+        use(B, me, ts) { B.hit(me, ts[0], { dmg: 19 }); B.invuln(me, 1); } },
+      { name: '搠地', cost: 11, target: 'one', desc: '单体45伤，其余敌方各18',
+        use(B, me, ts) {
+          const t = ts[0];
+          B.hit(me, t, { dmg: 45 });
+          B.foesOf(me).forEach((u) => { if (u.alive && u !== t) B.hit(me, u, { dmg: 18, aoe: true }); });
+        } },
+    ],
+  },
+
+  {
+    name: '殷红', element: '无', hp: 105, vital: 15, body: 39, role: '刺客', spirit: [3, 6, -1],
+    passive: '血量<35%时，无属性技能伤害×1.35（DOT 不享受）',
+    skills: [
+      { name: '大刀纵劈', cost: 2, target: 'one', desc: '单体30伤；血量<35%时目标额外破甲1回合（每局限1次）',
+        use(B, me, ts) {
+          const low = me.hp < me.maxHp * 0.35;
+          B.hit(me, ts[0], { dmg: 30, mult: low ? 1.35 : 1 });
+          if (low && !me.polieUsed) { B.debuff(ts[0], '破甲', 1); me.polieUsed = true; }
+        } },
+      { name: '大刀横斩', cost: 2, target: 'two', desc: '相邻敌人各12伤，独立判定部位',
+        use(B, me, ts) {
+          const low = me.hp < me.maxHp * 0.35;
+          ts.forEach((t) => B.hit(me, t, { dmg: 12, mult: low ? 1.35 : 1 }));
+        } },
+      { name: '陷阵之志', cost: 3, target: 'one', desc: '单体30伤；击杀后追加攻击需额外消耗1气势',
+        use(B, me, ts) {
+          const low = me.hp < me.maxHp * 0.35;
+          B.hit(me, ts[0], { dmg: 30, mult: low ? 1.35 : 1 });
+        } },
+      { name: '血雾弥漫', cost: 5, target: 'one', desc: '3段3伤 + 27单体伤，分段判定部位',
+        use(B, me, ts) {
+          const low = me.hp < me.maxHp * 0.35;
+          const m = low ? 1.35 : 1;
+          for (let i = 0; i < 3; i++) B.hit(me, ts[0], { dmg: 3, mult: m });
+          B.hit(me, ts[0], { dmg: 27, mult: m });
+        } },
+      { name: '尸横遍野', cost: 7, target: 'all', desc: '全体39伤，统一部位判定；单局最多2次',
+        use(B, me, ts) {
+          me.shitiUsed = (me.shitiUsed || 0) + 1;
+          const low = me.hp < me.maxHp * 0.35;
+          ts.forEach((t) => B.hit(me, t, { dmg: 39, mult: low ? 1.35 : 1, aoe: true }));
+        } },
+    ],
+  },
+
+  {
+    name: '沧嵐', element: '无', hp: 145, vital: 10, body: 30, role: '坦克', spirit: [1, 5, -3],
+    passive: '每大回合+1层沉岳印记；每层最大生命+5、受伤-1.2%；印记≥8层普攻附带锐锋；≥15层回合初回8%血、攻击挂破甲；血量首次<40%直接+5印记+狂怒2回合',
+    skills: [
+      { name: '坚岩平击', cost: 0, target: 'one', desc: '12伤 +1印记；自身蓄势；印记≥5层则贯通2回合',
+        use(B, me, ts) {
+          B.hit(me, ts[0], { dmg: 12 });
+          B.mark(me, '沉岳', 1);
+          B.doubleNext(me);
+          if ((me.marks['沉岳'] || 0) >= 5) B.buff(me, '贯通', 2);
+          B.gainQi(me, 1);
+        } },
+      { name: '固甲守御', cost: 2, target: 'self', desc: '本回合受伤-40%；被击+2印记+锐锋，攻击者挂挫志',
+        use(B, me) { B.reduce(me, 0.4, 1); B.mark(me, '沉岳', 2); B.buff(me, '锐锋', 1); B.log.push('固甲守御：攻击者挂挫志（近似）'); } },
+      { name: '山崩震击', cost: 4, target: 'one', desc: '基础28伤，每5层印记额外+7；附加割裂3回合',
+        use(B, me, ts) {
+          const n = me.marks['沉岳'] || 0;
+          B.hit(me, ts[0], { dmg: 28 + Math.floor(n / 5) * 7 });
+          B.debuff(ts[0], '割裂', 3);
+        } },
+      { name: '地脉回涌', cost: 5, target: 'self', desc: '回复35%已损失血量，+3印记，贯通3回合',
+        use(B, me) {
+          B.heal(me, me, Math.floor((me.maxHp - me.hp) * 0.35));
+          B.mark(me, '沉岳', 3);
+          B.buff(me, '贯通', 3);
+        } },
+      { name: '万岳归墟', cost: 9, target: 'one', desc: '前3回合不可释放；22 + 印记×4 伤害；目标封印2回合；+4印记 +1层愈战',
+        use(B, me, ts) {
+          if (B.round <= 3) { B.log.push('万岳归墟：前 3 大回合不可释放'); return; }
+          const n = me.marks['沉岳'] || 0;
+          B.hit(me, ts[0], { dmg: 22 + n * 4 });
+          B.debuff(ts[0], '封印', 2);
+          B.mark(me, '沉岳', 4);
+          B.stack(me, '愈战', 1);
+        } },
+    ],
+  },
+]);
+
+// 武器表（用户补充的完整版）：39 把，按元素分派系
+// mods 只实现引擎读得懂的键：fireValAdd / iceValAdd / healAdd / shieldMult / dmgPct / dotAdd
+// wake(B, owner) = 破碎亡语，owner 可能已经阵亡
+const main = (B, o) => B.live(B.foesOf(o))[0];
+const pick = (B, o) => { const a = B.live(B.foesOf(o)); return a[Math.floor(B.rnd() * a.length)]; };
+const allFoes = (B, o) => B.live(B.foesOf(o));
+const allies = (B, o) => B.live(B.alliesOf(o));
+
+registerWeapons([
+  // 一、火系
+  { name: '偃月刀', element: '火', dur: 12, mods: { fireValAdd: 1 }, passive: '普攻每段命中后自身气势额外+1（每回合限1次）',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 6, ele: ['火', 2], part: false, force: true })); } },
+  { name: '爆炎双刃', element: '火', dur: 8, mods: { dmgPctLow: { below: 0.5, pct: 0.1 } }, passive: '释放自爆类技能时主目标额外+2火值',
+    wake(B, o) { const m = main(B, o); if (m) { B.hit(o, m, { dmg: 10, ele: ['火', 2], part: false, force: true }); B.splash(o, m, 5, ['火', 2]); } } },
+  { name: '焚天法杖', element: '火', dur: 10, mods: { dotAdd: 1 }, passive: '灼烧目标死亡时相邻敌方受到+3伤害',
+    wake(B, o) { allFoes(B, o).forEach((t) => { B.hit(o, t, { dmg: B.hasStatus(t, '灼烧') ? 8 : 5, ele: ['火', 1], part: false, force: true }); }); } },
+  { name: '龙煌战戟', element: '火', dur: 14, mods: { elemTakeMinus: 1 }, passive: '进入神备状态时自身回复8点血量',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 8, ele: ['火', 3], part: false, force: true })); B.buff(o, '锐锋', 1); } },
+
+  // 二、水系
+  { name: '澜水法珠', element: '水', dur: 10, mods: { wetAdd: 1 }, passive: '清除灼烧时自身回复3点血量',
+    wake(B, o) { allies(B, o).forEach((t) => { B.clearStatus(t, '灼烧'); t.vals.火 = 0; t.hp = Math.min(t.maxHp, t.hp + 5); }); } },
+  { name: '潮汐权杖', element: '水', dur: 10, mods: { tidemarks: 0.02 }, passive: '自身潮湿时每回合结束额外回复2点血量',
+    wake(B, o) { allies(B, o).forEach((t) => { B.addWet(t, 1); t.hp = Math.min(t.maxHp, t.hp + 6); }); allFoes(B, o).forEach((t) => { t.vals.火 = 0; }); } },
+  { name: '鳞波枪', element: '水', dur: 9, mods: { healAdd: 2 }, passive: '多段普攻每段命中后自身回复1点血量',
+    wake(B, o) { allies(B, o).forEach((t) => { t.hp = Math.min(t.maxHp, t.hp + 8); B.popDebuff(t); }); } },
+
+  // 三、风系
+  { name: '挽风双刃', element: '风', dur: 10, mods: {}, passive: '风形态下自身受到伤害-5%',
+    wake(B, o) { allies(B, o).forEach((t) => B.buff(t, '锐锋', 1)); } },
+  { name: '朔风法杖', element: '风', dur: 9, mods: {}, passive: '自身血量首次低于30%时额外获得1回合锐锋',
+    wake(B, o) { allFoes(B, o).forEach((t) => { t.vals.毒 = Math.max(0, t.vals.毒 - 3); }); } },
+  { name: '裂风短刃', element: '风', dur: 8, mods: {}, passive: '本回合未受伤时风系技能伤害+8%',
+    wake(B, o) { allFoes(B, o).forEach((t) => { B.hit(o, t, { dmg: 5, part: false, force: true }); B.popDebuff(t); }); } },
+
+  // 四、冰系
+  { name: '霜袖法杖', element: '冰', dur: 10, mods: { iceValAdd: 1 }, passive: '雪域形态下冰系技能伤害+8%',
+    wake(B, o) { allFoes(B, o).forEach((t) => { B.stackElement(o, t, '冰', 2); if (B.hasStatus(t, '冰冻')) B.hit(o, t, { dmg: 5, part: false, force: true }); }); } },
+  { name: '寒渊双刃', element: '冰', dur: 11, mods: { elemTakeMinus: 1 }, passive: '云来形态下自身受到伤害-5%',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 5, ele: ['冰', 2], part: false, force: true })); } },
+  { name: '永冻巨锤', element: '冰', dur: 14, mods: { shieldMult: 1.1 }, passive: '被冰冻目标攻击自身时伤害额外-10%',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 6, ele: ['冰', 2], part: false, force: true })); allies(B, o).forEach((t) => B.shield(t, 5, 2)); } },
+
+  // 五、雷系
+  { name: '浮光法杖', element: '雷', dur: 9, mods: {}, passive: '导电反应触发后自身回复2点气势（每回合限1次）',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 6, ele: ['雷', 2], part: false, force: true })); } },
+  { name: '奔霄短刃', element: '雷', dur: 8, mods: {}, passive: '本回合未受伤时自身雷系伤害+8%',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 5, ele: ['雷', 2], part: false, force: true })); } },
+  { name: '霆光长弓', element: '雷', dur: 10, mods: {}, passive: '自身血量低于40%时护盾吸收+3',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 6, ele: ['雷', 2], part: false, force: true })); const t = pick(B, o); if (t) B.addStatus(t, '麻痹', 1); } },
+  { name: '掌雷指环', element: '雷', dur: 8, mods: {}, passive: '每命中一个目标自身气势+1（每回合限3次）',
+    wake(B, o) { const t = pick(B, o); if (t) B.hit(o, t, { dmg: 8, part: false, force: true }); allFoes(B, o).forEach((x) => B.stackElement(o, x, '雷', 2)); } },
+
+  // 六、毒系
+  { name: '虫蛊法珠', element: '毒', dur: 9, mods: { eggChance: 0.1 }, passive: '引爆虫卵时每个虫卵额外+1伤害',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.stackElement(o, t, '毒', 3)); const t = pick(B, o); if (t) B.mark(t, '虫卵', 1); } },
+  { name: '蛊蔓藤杖', element: '毒', dur: 9, mods: {}, passive: '敌方携带中毒/虫卵时自身毒系伤害+5%',
+    wake(B, o) { allFoes(B, o).forEach((t) => { B.stackElement(o, t, '毒', 3); if (B.hasStatus(t, '中毒')) B.hit(o, t, { dmg: 4, part: false, force: true }); }); } },
+  { name: '蚀骸骨刃', element: '毒', dur: 10, mods: {}, passive: '血量低于35%时自身毒值获取+1',
+    wake(B, o) { const t = pick(B, o); if (t) { B.stackElement(o, t, '毒', 6); B.addStatus(t, '中毒', 2); } allFoes(B, o).forEach((x) => B.stackElement(o, x, '毒', 2)); } },
+
+  // 七、土系
+  { name: '磐岩巨盾', element: '土', dur: 16, mods: {}, passive: '消耗岩印抵消伤害时额外抵消1点',
+    wake(B, o) { allies(B, o).forEach((t) => B.shield(t, 10, 2)); B.mark(o, '岩印', 3); } },
+  { name: '沉壤战锤', element: '土', dur: 13, mods: {}, passive: '岩印≥3层时自身受到伤害-5%',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 6, part: false, force: true })); allies(B, o).forEach((t) => B.mark(t, '岩印', 2)); } },
+  { name: '岩铠重盾', element: '土', dur: 15, mods: { shieldMult: 1.1 }, passive: '每回合未受伤时额外+1岩印（每局限3次）',
+    wake(B, o) { allies(B, o).forEach((t) => B.shield(t, 8, 2)); B.mark(o, '岩印', 3); } },
+
+  // 八、光系
+  { name: '晨晖圣杖', element: '光', dur: 10, mods: { healAdd: 3, shieldMult: 1.05 }, passive: '每层辉光额外+1%治疗',
+    wake(B, o) { allies(B, o).forEach((t) => { t.hp = Math.min(t.maxHp, t.hp + 8); B.popDebuff(t); }); } },
+  { name: '曙星法珠', element: '光', dur: 9, mods: {}, passive: '每层辉光使自身光系伤害+1%',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: B.hasStatus(t, '诅咒') ? 9 : 6, part: false, force: true })); } },
+  { name: '流光圣剑', element: '光', dur: 11, mods: {}, passive: '清除己方减益时自身回复2点血量',
+    wake(B, o) { allies(B, o).forEach((t) => B.popDebuff(t)); allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 5, part: false, force: true })); } },
+
+  // 九、暗系
+  { name: '冥影短刃', element: '暗', dur: 8, mods: {}, passive: '攻击带咒印目标时自身回复1点血量',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.mark(t, '咒印', 1)); const t = pick(B, o); if (t) t.qi = Math.max(0, t.qi - 1); } },
+  { name: '夜煞法杖', element: '暗', dur: 9, mods: {}, passive: '敌方咒印总数≥8层时自身暗系伤害+5%',
+    wake(B, o) { allFoes(B, o).forEach((t) => { B.mark(t, '咒印', 1); if ((t.marks.咒印 || 0) >= 3) B.hit(o, t, { dmg: 5, part: false, force: true }); }); } },
+  { name: '影刃双刺', element: '暗', dur: 8, mods: {}, passive: '击杀目标后自身回复3点血量',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 5, part: false, force: true })); const t = pick(B, o); if (t) B.mark(t, '咒印', 2); } },
+
+  // 十、金系
+  { name: '铮锋长剑', element: '金', dur: 12, mods: {}, passive: '命中护甲部位时35%概率额外+1锋锐印',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 6, part: false, force: true })); const m = main(B, o); if (m) B.debuff(m, '破甲', 2); } },
+  { name: '铁骨重盾', element: '金', dur: 16, mods: { shieldMult: 1.1 }, passive: '被攻击时若伤害>15额外+1锋锐印（每回合限1次）',
+    wake(B, o) { allies(B, o).forEach((t) => B.shield(t, 8, 2)); B.mark(o, '锋锐印', 3); } },
+  { name: '铁心巨斧', element: '金', dur: 12, mods: {}, passive: '狂怒期间自身金系伤害+5%',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 6, part: false, force: true })); const m = main(B, o); if (m) B.debuff(m, '破甲', 1); } },
+
+  // 十一、木系
+  { name: '青藤法杖', element: '木', dur: 10, mods: { healAdd: 3 }, passive: '每层生息印额外+1%治疗',
+    wake(B, o) { allies(B, o).forEach((t) => { t.hp = Math.min(t.maxHp, t.hp + 8); B.popDebuff(t); }); } },
+  { name: '苍柏战刃', element: '木', dur: 11, mods: {}, passive: '自身血量低于50%时木系伤害+5%',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 6, part: false, force: true })); allies(B, o).forEach((t) => B.mark(t, '生息印', 2)); } },
+  { name: '灵木枝杖', element: '木', dur: 9, mods: { shieldMult: 1.05 }, passive: '释放治疗技能时额外回复1点血量',
+    wake(B, o) { allies(B, o).forEach((t) => { t.hp = Math.min(t.maxHp, t.hp + 6); B.shield(t, 5, 1); }); } },
+
+  // 十二、无属性
+  { name: '撼地重锤', element: '无', dur: 12, mods: {}, passive: '被2名不同敌方攻击后额外+1气势（每回合限1次）',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 5, part: false, force: true })); B.gainQi(o, 2); } },
+  { name: '不坏重盾', element: '无', dur: 16, mods: { shieldMult: 1.1 }, passive: '复活后护盾效果+10%',
+    wake(B, o) { allies(B, o).forEach((t) => B.shield(t, 8, 2)); B.popDebuff(o); } },
+  { name: '殷红巨刃', element: '无', dur: 10, mods: { dmgPctLow: { below: 0.35, pct: 0.05 } }, passive: '击杀目标后自身回复3点血量',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 6, part: false, force: true })); const m = main(B, o); if (m) B.debuff(m, '破甲', 1); } },
+  { name: '沉岳重戟', element: '无', dur: 14, mods: { hpPerMark: 1 }, passive: '印记≥8层时普攻附带锐锋',
+    wake(B, o) { allFoes(B, o).forEach((t) => B.hit(o, t, { dmg: 6, part: false, force: true })); B.mark(o, '沉岳', 3); } },
+]);
+
+/* ============ 元素混战 · 双人对战 UI（本地同屏热座） ============
+   依赖已内联的引擎：CHARS / roster / createBattle / act / recentLog / ENVIRONMENTS */
+
+const ELEM_COLOR = { 火:'#e0533d', 水:'#3d7de0', 风:'#3fae7a', 冰:'#4fc3dd', 雷:'#c58bff',
+  毒:'#8fbb3f', 土:'#b98a4a', 光:'#e0c04a', 暗:'#8a6bd6', 金:'#b9c0cc', 木:'#4fa35a', 无:'#9aa0a6' };
+const ELEM_ORDER = ['火','水','风','冰','雷','毒','土','光','暗','金','木','无'];
+const FORM_NAME = { 神备: '神备', 风: '风形态', 雪域: '雪域', 云来: '云来', 雷阵: '雷阵' };
+const FORM_ORDER = ['常态', '风', '雪域', '云来', '雷阵', '神备'];
+
+const S = {
+  screen: 'setup',
+  p1: { name: '玩家1', team: [] },
+  p2: { name: '玩家2', team: [] },
+  env: 'random',
+  detail: null,
+  B: null,
+  queue: [],
+  pending: null,
+  revealed: false,
+  error: '',
+};
+
+const $app = () => document.getElementById('app');
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function groupedRoster() {
+  const g = {};
+  for (const n of roster()) { const e = CHARS[n].element; (g[e] = g[e] || []).push(n); }
+  return ELEM_ORDER.map((e) => ({ e, list: g[e] || [] }));
+}
+
+function charCard(name, selected) {
+  const c = CHARS[name];
+  return `<div class="charcard ${selected ? 'sel' : ''}" data-char="${esc(name)}">
+    <div class="cn"><span class="dot" style="background:${ELEM_COLOR[c.element]}"></span>${esc(name)}</div>
+    <div class="cmeta">${c.element} · ${c.maxHp} · ${c.role}</div>
+  </div>`;
+}
+
+/* ---- 详情面板（按形态分组） ---- */
+function skillListHTML(skills) {
+  return skills.map((s) => `<div class="sk"><b>${esc(s.name)}</b><span class="cost">${s.cost}气</span><div class="skd">${esc(s.desc || '')}</div></div>`).join('');
+}
+
+function detailHTML() {
+  if (!S.detail || !CHARS[S.detail]) return `<div class="detail"><div class="dmeta">把鼠标移到角色上，这里会显示完整技能详情</div></div>`;
+  const c = CHARS[S.detail];
+  const groups = {};
+  for (const s of c.skills) { const f = s.form || '常态'; (groups[f] = groups[f] || []).push(s); }
+  const body = FORM_ORDER.filter((f) => groups[f] && groups[f].length).map((f) => {
+    const label = f === '常态' ? '常态技能' : `${FORM_NAME[f] || f}技能（变形后可用）`;
+    return `<div class="form-title">${esc(label)}</div>${skillListHTML(groups[f])}`;
+  }).join('');
+  return `<div class="detail">
+    <h3>${esc(c.name)} <span style="color:${ELEM_COLOR[c.element]}">${c.element}</span> <span class="tag">${esc(c.role)}</span></h3>
+    <div class="dmeta">血量 ${c.maxHp} · 要害${c.parts.vital}% / 身体${c.parts.body}% / 护甲${c.parts.armor}% · 气韵 初始${c.sp.init} 上限${c.sp.max} 下限${c.sp.min}</div>
+    <div class="dpas">被动：${esc(c.passive || '—')}</div>
+    <div class="dsk">${body}</div>
+  </div>`;
+}
+
+function updateDetail() {
+  const box = document.getElementById('detailbox');
+  if (box) box.innerHTML = detailHTML();
+}
+
+function pickColumn(side) {
+  const p = S[side];
+  const full = p.team.length === 4;
+  const sel = new Set(p.team);
+  const groups = groupedRoster().map((g) => `<div class="group-title"><b style="color:${ELEM_COLOR[g.e]}">${g.e}</b>系</div>
+    <div class="rostergrid">${g.list.map((n) => charCard(n, sel.has(n))).join('')}</div>`).join('');
+  return `<div class="col card" data-side="${side}">
+    <h2>${esc(p.name)} <span class="tag">${side === 'p1' ? '红色方' : '蓝色方'}</span></h2>
+    <input class="name" data-name="${side}" value="${esc(p.name)}" placeholder="输入玩家名">
+    ${groups}
+    <div class="counter ${full ? 'ok' : ''}">已选 ${p.team.length} / 4${full ? ' ✓' : ''}</div>
+  </div>`;
+}
+
+function renderSetup() {
+  const canStart = S.p1.team.length === 4 && S.p2.team.length === 4;
+  const dup = [...S.p1.team].filter((n) => S.p2.team.includes(n));
+  const envBtns = [['random', '随机'], ...ENVIRONMENTS.map((e) => [e.id, e.name])]
+    .map(([id, name]) => `<button class="envbtn ${S.env === id ? 'sel' : ''}" data-env="${id}">${name}</button>`).join('');
+  $app().innerHTML = `
+    <h1>元素混战 · 双人对战</h1>
+    <div class="sub">本地同屏热座 · 双方各选 4 名角色 · 轮流行动 · 全灭或回合末人数差 ≥3 判胜</div>
+    <div class="row">${pickColumn('p1')}${pickColumn('p2')}</div>
+    <div class="card" style="margin-top:12px">
+      <b style="font-size:13px">战场环境</b>
+      <div class="envrow">${envBtns}</div>
+    </div>
+    <div id="detailbox" class="detail"></div>
+    <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+      <button class="btn big" data-go="start" ${canStart && !dup.length ? '' : 'disabled'}>开始对战</button>
+      ${dup.length ? `<span class="err">角色重复：${dup.join('、')}（两边不能选同一角色）</span>` : ''}
+    </div>`;
+  updateDetail();
+}
+
+/* ---------------- 战斗 ---------------- */
+
+const sideOf = (key) => (key === 'player' ? 'p1' : 'p2');
+
+function chipsText(u) {
+  const bits = [];
+  for (const s of u.st) bits.push(`${s.k}${s.t}`);
+  for (const b of u.buffs) bits.push(b.k + b.t);
+  for (const d of u.debuffs) bits.push(d.k + d.t);
+  if (u.shield && u.shield.t > 0) bits.push(`盾${u.shield.n}`);
+  if (u.invuln > 0) bits.push('无敌');
+  if (u.wet > 0) bits.push(`潮湿${u.wet}`);
+  const vals = Object.entries(u.vals || {}).filter(([, v]) => v > 0).map(([k, v]) => `${k}${v}`);
+  if (vals.length) bits.push(`[${vals.join(' ')}]`);
+  return bits.length ? bits.join(' ') : '—';
+}
+
+function unitHTML(u, idx, sideKey) {
+  const dead = !u.alive;
+  const pct = Math.max(0, Math.min(100, (u.hp / u.maxHp) * 100));
+  const color = pct > 60 ? '#43b581' : pct > 30 ? '#e0a83d' : '#e0533d';
+  const pickable = S.pending && S.pending.side === sideKey && u.alive;
+  const picked = S.pending && S.pending.picked.includes(idx + 1);
+  const form = u.form && u.form !== '常态' ? `<span class="form-badge">${esc(FORM_NAME[u.form] || u.form)}</span>` : '';
+  return `<div class="unit ${dead ? 'dead' : ''} ${pickable ? 'pickable' : ''} ${picked ? 'picked' : ''}" data-utgt="${sideKey}:${idx}">
+    <div class="nm"><span class="dot" style="background:${ELEM_COLOR[u.element]}"></span>${esc(u.name)}${form}
+      <span class="hp">${dead ? '阵亡' : `${u.hp}/${u.maxHp}`}</span></div>
+    ${dead ? '' : `<div class="hpbar"><i style="width:${pct}%;background:${color}"></i></div>`}
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span class="chips">${chipsText(u)}</span>
+      <span class="qi">气${u.qi} ${u.spirit > 0 ? '+' : ''}${u.spirit}</span>
+    </div>
+  </div>`;
+}
+
+function sideHTML(units, sideKey, label, accent) {
+  return `<div class="side-label" style="color:${accent}">■ ${label} ${esc(S[sideOf(sideKey)].name)}</div>
+    <div class="units">${units.map((u, i) => unitHTML(u, i, sideKey)).join('')}</div>`;
+}
+
+function queuedZero(name) {
+  return S.queue.some((q) => q.unit === name && CHARS[name].skills.find((s) => s.name === q.skill).cost === 0);
+}
+
+function skillButtons(sideKey) {
+  const units = S.B.sides[sideKey].units;
+  const firstLimited = S.B.round === 1 && sideKey === S.B.first;
+  const usedBy = (name) => S.queue.filter((q) => q.unit === name).length;
+  return units.map((u) => {
+    if (!u.alive) return '';
+    const def = CHARS[u.name];
+    const form = u.form || '常态';
+    const skills = def.skills.filter((s) => (s.form || '常态') === form);
+    const btns = skills.map((s) => {
+      const used = usedBy(u.name);
+      const cost = s.name === '冲山' && u.freeChongshan ? 0 : s.cost;
+      const disabled = used >= 2
+        || (firstLimited && used >= 1)
+        || cost > u.qi
+        || (cost === 0 && (u.zeroUsed || queuedZero(u.name)))
+        || (cost >= 5 && S.B.hasDebuff(u, '封印'))
+        || (firstLimited && cost >= 7)
+        || u.frozen;
+      return `<button class="skbtn" data-skill="${sideKey}|${u.key}|${esc(s.name)}" ${disabled ? 'disabled' : ''}
+        title="${esc(s.desc || '')}">${esc(s.name)}<span class="cost">${cost}</span></button>`;
+    }).join('');
+    const frozen = u.frozen ? ' <span style="color:#4fc3dd">冰冻</span>' : '';
+    const formTag = form !== '常态' ? ` <span class="form-badge">${esc(FORM_NAME[form] || form)}</span>` : '';
+    return `<div class="unit-row"><span class="uname">${esc(u.name)}${frozen}${formTag}</span><div style="flex:1">${btns}</div></div>`;
+  }).join('');
+}
+
+function needHandoff() { return !S.revealed && !S.B.over; }
+function handoffOverlay(name, accent) {
+  return `<div class="overlay"><div class="box">
+    <h2 style="color:${accent}">轮到 ${esc(name)}</h2>
+    <p>请把设备交给 <b>${esc(name)}</b>，点下方按钮开始编排本回合行动。</p>
+    <button class="btn big" data-go="reveal">开始回合</button>
+  </div></div>`;
+}
+function overOverlay(B) {
+  const winner = B.over.winner === 'player' ? S.p1.name : B.over.winner === 'enemy' ? S.p2.name : '平局';
+  return `<div class="overlay"><div class="box">
+    <h2>${B.over.winner === 'draw' ? '平局' : esc(winner) + ' 获胜'}</h2>
+    <p>${esc(B.over.reason)}</p>
+    <button class="btn big" data-go="rematch">再来一局</button>
+    <button class="btn ghost" data-go="tomenu">返回选人</button>
+  </div></div>`;
+}
+
+function renderBattle() {
+  const B = S.B;
+  const sideKey = B.phase;
+  const otherKey = B.other(sideKey);
+  const accent = sideKey === 'player' ? '#e0533d' : '#3d7de0';
+  const activeName = S[sideOf(sideKey)].name;
+
+  const foe = sideHTML(B.sides[otherKey].units, otherKey, '对手', sideOf(otherKey) === 'p1' ? '#e0533d' : '#3d7de0');
+  const mine = sideHTML(B.sides[sideKey].units, sideKey, '行动方', accent);
+
+  const queueHTML = S.queue.map((q) => `<span class="qitem">${esc(q.unit)}·${esc(q.skill)}${q.targets.length ? '@' + q.targets.join(',') : ''}</span>`).join('');
+
+  let pickHint = '';
+  if (S.pending) {
+    const need = S.pending.skill.target === 'two' ? '1-2' : '1';
+    const commitBtn = S.pending.skill.target === 'two'
+      ? `<button class="btn" data-go="commit" ${S.pending.picked.length >= 1 ? '' : 'disabled'}>确定目标</button>` : '';
+    pickHint = `<div class="pick-hint">${esc(S.pending.unit)} 使用【${esc(S.pending.skill.name)}】：点选目标（已选 ${S.pending.picked.length}/${need}） ${commitBtn}</div>`;
+  }
+
+  const resoLine = `共鸣 ${esc(S[sideOf('player')].name)}【${B.reso.player || '无'}】 / ${esc(S[sideOf('enemy')].name)}【${B.reso.enemy || '无'}】`;
+
+  $app().innerHTML = `
+    <h1 style="font-size:16px">元素混战 · 双人对战</h1>
+    <div class="battle-top">
+      <span class="phase" style="color:${accent}">${esc(activeName)} 行动</span>
+      <span>第 ${B.round} 大回合</span>
+      <span>环境 ${esc(B.env.name)}</span>
+      <span>x=${B.x}</span>
+      <span style="color:var(--muted)">${esc(resoLine)}</span>
+      ${B.backwater ? `<span style="color:#e0533d">背水一战</span>` : ''}
+    </div>
+    <div class="battle-wrap">
+      <div class="battle-main">
+        ${foe}
+        ${mine}
+        <div class="skillpanel">${pickHint}${skillButtons(sideKey)}</div>
+        <div class="queuebar">
+          <span style="color:var(--muted);font-size:12px">已排操作：</span>
+          <span style="flex:1;display:flex;gap:6px;flex-wrap:wrap">${queueHTML || '<span style="color:var(--muted);font-size:12px">（空）</span>'}</span>
+          <button class="btn" data-go="submit" ${S.queue.length ? '' : 'disabled'}>提交（${S.queue.length}）</button>
+          <button class="btn ghost" data-go="clear" ${S.queue.length || S.pending ? '' : 'disabled'}>清空</button>
+        </div>
+        ${S.error ? `<div class="err">${esc(S.error)}</div>` : ''}
+      </div>
+      <aside class="battle-log"><b>战报</b>\n${esc(recentLog(B, 40))}</aside>
+    </div>
+    ${needHandoff() ? handoffOverlay(activeName, accent) : ''}
+    ${B.over ? overOverlay(B) : ''}
+  `;
+}
+
+/* ---------------- 动作 ---------------- */
+
+function startBattle() {
+  S.B = createBattle({
+    playerTeam: S.p1.team, enemyTeam: S.p2.team,
+    seed: Date.now() >>> 0,
+    env: S.env === 'random' ? undefined : S.env,
+  });
+  S.queue = []; S.pending = null; S.error = ''; S.revealed = false;
+  S.screen = 'battle';
+}
+
+function doSubmit() {
+  const B = S.B;
+  if (!S.queue.length) return;
+  S.error = '';
+  try {
+    act(B, B.phase, S.queue.map((a) => ({ unit: a.unit, skill: a.skill, targets: a.targets })));
+    S.queue = []; S.pending = null; S.revealed = false;
+  } catch (e) { S.error = e.message; }
+}
+
+function startSkill(sideKey, u, skill) {
+  if (skill.target === 'one' || skill.target === 'two') {
+    S.pending = { unit: u.name, skill, side: S.B.other(sideKey), picked: [] };
+  } else if (skill.target === 'ally1') {
+    S.pending = { unit: u.name, skill, side: sideKey, picked: [] };
+  } else {
+    S.queue.push({ unit: u.name, skill: skill.name, targets: [] });
+    S.pending = null;
+  }
+}
+
+function commitPending() {
+  S.queue.push({ unit: S.pending.unit, skill: S.pending.skill.name, targets: S.pending.picked });
+  S.pending = null;
+}
+
+function onAppClick(ev) {
+  const t = ev.target;
+  const go = t.closest('[data-go]');
+  if (go) {
+    const g = go.dataset.go;
+    if (g === 'reveal') { S.revealed = true; }
+    else if (g === 'submit') { doSubmit(); }
+    else if (g === 'clear') { S.queue = []; S.pending = null; }
+    else if (g === 'commit') { commitPending(); }
+    else if (g === 'start') { startBattle(); renderBattle(); return; }
+    else if (g === 'rematch') { startBattle(); renderBattle(); return; }
+    else if (g === 'tomenu') { S.screen = 'setup'; S.B = null; S.queue = []; S.pending = null; renderSetup(); return; }
+    renderBattle();
+    return;
+  }
+
+  if (S.screen === 'setup') {
+    const nameInput = t.closest('.name');
+    if (nameInput) { const side = nameInput.dataset.name; S[side].name = nameInput.value.trim() || (side === 'p1' ? '玩家1' : '玩家2'); return; }
+    const col = t.closest('.col');
+    const card = t.closest('[data-char]');
+    if (card && col) {
+      const side = col.dataset.side, n = card.dataset.char;
+      S.detail = n;
+      const arr = S[side].team, i = arr.indexOf(n);
+      if (i >= 0) arr.splice(i, 1); else if (arr.length < 4) arr.push(n);
+      renderSetup();
+      return;
+    }
+    const envBtn = t.closest('[data-env]');
+    if (envBtn) { S.env = envBtn.dataset.env; renderSetup(); return; }
+    return;
+  }
+
+  // 战斗：目标点选
+  const tg = t.closest('[data-utgt]');
+  if (tg && S.pending) {
+    const [sk, idxStr] = tg.dataset.utgt.split(':');
+    if (sk !== S.pending.side) return;
+    const pos = Number(idxStr) + 1;
+    const picked = [...S.pending.picked];
+    const k = picked.indexOf(pos);
+    if (k >= 0) picked.splice(k, 1);
+    else if (S.pending.skill.target === 'two' ? picked.length < 2 : picked.length < 1) picked.push(pos);
+    S.pending = { ...S.pending, picked };
+    if (S.pending.skill.target !== 'two' && picked.length >= 1) commitPending();
+    renderBattle();
+    return;
+  }
+  // 战斗：技能点选
+  const skb = t.closest('[data-skill]');
+  if (skb && !skb.disabled) {
+    const [sideKey, key, skillName] = skb.dataset.skill.split('|');
+    const u = S.B.sides[sideKey].units.find((x) => x.key === key);
+    const skill = CHARS[u.name].skills.find((s) => s.name === skillName);
+    if (skill) { startSkill(sideKey, u, skill); renderBattle(); }
+  }
+}
+
+document.getElementById('app').addEventListener('click', onAppClick);
+document.getElementById('app').addEventListener('mouseover', (ev) => {
+  const card = ev.target.closest ? ev.target.closest('[data-char]') : null;
+  if (card && card.dataset.char !== S.detail) { S.detail = card.dataset.char; updateDetail(); }
+});
+renderSetup();
+
+</script>
+</body>
+</html>
